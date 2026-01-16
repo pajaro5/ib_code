@@ -27,4 +27,4 @@ while keep_playing and len(bingo) > 0:
     else:
         keep_playing = False
 
-print("Fin del juego")
+print("Fin del juego, gracias")
