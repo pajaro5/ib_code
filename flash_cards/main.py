@@ -3,10 +3,6 @@ import pandas as pd
 from flashcard import Flashcard
 from deck import Deck  
 
-pA = Flashcard("Tiene tienta tu tintero?","No tiene")
-
-
-
 def main():
     st.set_page_config(page_title="OOP Flashcards", layout="centered") # Layout centered se ve mejor para cartas
     st.title("🗂️ Repasador de OOP")
