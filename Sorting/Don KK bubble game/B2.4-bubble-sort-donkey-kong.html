@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BUBBLE KONG — IB CS SL B2.4</title>
+<meta name="author" content="Pablo Robayo">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/skulpt/1.2.0/skulpt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/skulpt/1.2.0/skulpt-stdlib.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a1a;--panel:#12122a;--border:#3a3a6a;
+  --yellow:#f8e71c;--orange:#f5a623;--red:#e74c3c;
+  --green:#2ecc71;--blue:#3498db;--purple:#9b59b6;
+  --white:#ecf0f1;--gray:#7f8c8d;
+  --pixel:"Courier New",monospace;
+}
+body{background:var(--bg);color:var(--white);font-family:var(--pixel);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:10px}
+@keyframes blink   {50%{opacity:0}}
+@keyframes slideIn {from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop     {0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes shake   {0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes glow    {0%,100%{box-shadow:0 0 6px currentColor}50%{box-shadow:0 0 18px currentColor}}
+.blink{animation:blink 1s step-end infinite}
+.pop  {animation:pop .3s ease}
+.shake{animation:shake .4s ease}
+.screen{display:none;width:100%;max-width:900px;flex-direction:column;align-items:center;gap:14px}
+.screen.active{display:flex}
+.btn{
+  background:var(--yellow);color:#000;border:none;
+  padding:12px 28px;font-family:var(--pixel);font-size:.95rem;font-weight:900;
+  cursor:pointer;letter-spacing:2px;text-transform:uppercase;
+  box-shadow:4px 4px 0 var(--orange),7px 7px 0 #000;
+  transition:transform .1s,box-shadow .1s;
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--orange),9px 9px 0 #000}
+.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--orange)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-red   {background:var(--red);   box-shadow:4px 4px 0 #c0392b,7px 7px 0 #000}
+.btn-red:hover  {box-shadow:6px 6px 0 #c0392b,9px 9px 0 #000}
+.btn-green {background:var(--green); box-shadow:4px 4px 0 #27ae60,7px 7px 0 #000}
+.btn-green:hover{box-shadow:6px 6px 0 #27ae60,9px 9px 0 #000}
+.btn-blue  {background:var(--blue);color:#fff;box-shadow:4px 4px 0 #2980b9,7px 7px 0 #000}
+.btn-blue:hover {box-shadow:6px 6px 0 #2980b9,9px 9px 0 #000}
+.btn-purple{background:var(--purple);color:#fff;box-shadow:4px 4px 0 #7d3c98,7px 7px 0 #000}
+.btn-purple:hover{box-shadow:6px 6px 0 #7d3c98,9px 9px 0 #000}
+.pixel-border{border:4px solid var(--border);box-shadow:4px 4px 0 #000}
+/* MAP */
+#screen-map{padding:20px 10px;text-align:center}
+.game-title{font-size:clamp(2rem,8vw,3.8rem);font-weight:900;color:var(--yellow);text-shadow:4px 4px 0 var(--orange),7px 7px 0 #000;letter-spacing:4px;line-height:1.1;margin-bottom:4px}
+.game-subtitle{font-size:.95rem;color:var(--orange);letter-spacing:2px;margin-bottom:16px}
+.kong-art{font-size:clamp(2.5rem,8vw,4rem);margin:8px 0;filter:drop-shadow(0 0 10px var(--orange))}
+.level-map{width:100%;max-width:680px;display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.map-row{display:flex;align-items:center;gap:10px;background:var(--panel);padding:10px 14px;cursor:pointer;border-left:6px solid var(--border);transition:border-color .2s,background .2s;position:relative}
+.map-row:hover{background:#1a1a3a}
+.map-row.unlocked{border-left-color:var(--green);cursor:pointer}
+.map-row.current {border-left-color:var(--yellow);background:#1a1a00;animation:glow .5s ease infinite}
+.map-row.locked  {border-left-color:var(--border);opacity:.45;cursor:not-allowed}
+.map-row.done    {border-left-color:var(--green);opacity:.7}
+.map-num{font-size:1.3rem;font-weight:900;min-width:36px;text-align:center}
+.map-title{font-size:.85rem;font-weight:bold;flex:1;text-align:left}
+.map-subtitle{font-size:.72rem;color:var(--gray);text-align:left}
+.map-status{font-size:.7rem;color:var(--green);min-width:60px;text-align:right}
+.ib-tag{display:inline-block;background:#1a1a3a;border:2px solid var(--purple);padding:3px 8px;font-size:.7rem;color:var(--purple);letter-spacing:1px}
+/* HUD */
+#hud{width:100%;max-width:900px;display:none;justify-content:space-between;align-items:center;background:var(--panel);padding:7px 14px;flex-wrap:wrap;gap:8px}
+#hud.visible{display:flex}
+.hud-b{text-align:center}
+.hud-l{font-size:.62rem;color:var(--gray);letter-spacing:2px;display:block}
+.hud-v{font-size:1rem;color:var(--yellow);font-weight:bold}
+/* GAME */
+#screen-game{padding:0 10px 20px}
+.level-banner{background:linear-gradient(90deg,#8B4513,#5a2d00,#8B4513);width:100%;text-align:center;padding:6px;font-size:.82rem;color:var(--yellow);letter-spacing:3px;border-bottom:4px solid #000;font-weight:bold}
+.game-area{width:100%;background:var(--panel);padding:18px;display:flex;flex-direction:column;align-items:center;gap:14px;position:relative}
+.q-progress{width:100%;display:flex;gap:6px;justify-content:center;margin-bottom:4px}
+.q-dot{width:14px;height:14px;border:2px solid var(--border);background:#0f0f25;transition:all .3s}
+.q-dot.done   {background:var(--green);border-color:var(--green)}
+.q-dot.current{background:var(--yellow);border-color:var(--yellow);animation:glow .8s ease infinite}
+.q-dot.wrong  {background:var(--red);border-color:var(--red)}
+.kong-row{display:flex;align-items:flex-end;gap:14px;width:100%}
+.kong-sprite{font-size:2.6rem;filter:drop-shadow(0 0 8px var(--orange));flex-shrink:0}
+.kong-bubble{background:var(--panel);border:3px solid var(--yellow);padding:8px 13px;font-size:.8rem;color:var(--yellow);flex:1;min-height:42px;line-height:1.5;position:relative}
+.kong-bubble::before{content:'';position:absolute;left:-12px;top:10px;border:6px solid transparent;border-right-color:var(--yellow)}
+.kong-bubble::after{content:'';position:absolute;left:-8px;top:12px;border:4px solid transparent;border-right-color:var(--panel)}
+.question-box{background:#0f0f25;border:3px solid;padding:14px 16px;width:100%;font-size:.9rem;line-height:1.6;animation:slideIn .3s ease}
+.question-box .q-label{font-size:.68rem;letter-spacing:2px;display:block;margin-bottom:8px;font-weight:bold}
+.question-prompt{font-size:.92rem;color:var(--white);margin-bottom:12px}
+.arr-display{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0}
+.arr-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.arr-idx{font-size:.62rem;color:var(--gray)}
+.arr-cell{width:54px;height:54px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;border:4px solid var(--border);background:#1a1a3a;color:var(--white);cursor:default;transition:all .25s}
+.arr-cell.clickable{cursor:pointer}
+.arr-cell.clickable:hover{border-color:var(--yellow);background:#2a2a00;transform:translateY(-3px)}
+.arr-cell.correct-cell{border-color:var(--green);background:#002a0a;color:var(--green);animation:pop .3s ease}
+.arr-cell.wrong-cell  {border-color:var(--red);background:#2a0000;animation:shake .4s ease}
+.arr-cell.highlight   {border-color:var(--yellow);background:#2a2a00;color:var(--yellow)}
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:8px}
+.opt-btn{background:#1a1a3a;border:3px solid var(--border);padding:10px 14px;font-family:var(--pixel);font-size:.85rem;color:var(--white);cursor:pointer;text-align:left;transition:border-color .2s,background .2s;line-height:1.4}
+.opt-btn:hover{border-color:var(--yellow);background:#1a1a00}
+.opt-btn.correct{border-color:var(--green)!important;background:#002a0a!important;color:var(--green)!important}
+.opt-btn.wrong  {border-color:var(--red)!important;background:#2a0000!important;color:var(--red)!important}
+.opt-btn:disabled{cursor:not-allowed}
+.blank-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:"Courier New",monospace;font-size:.9rem;color:#abb2bf;background:#0a0a0a;padding:10px 14px;border:2px solid var(--border);margin:6px 0}
+.blank-input{background:#1a1a3a;border:2px solid var(--yellow);color:var(--yellow);font-family:"Courier New",monospace;font-size:.9rem;padding:4px 8px;width:130px;text-align:center}
+.blank-input:focus{outline:none;box-shadow:0 0 8px var(--yellow)}
+.blank-input.correct{border-color:var(--green);color:var(--green);background:#002a0a}
+.blank-input.wrong  {border-color:var(--red);color:var(--red);background:#2a0000}
+.feedback{width:100%;padding:12px 14px;font-size:.84rem;line-height:1.6;border-left:6px solid var(--gray);background:#0f0f25;display:none;animation:slideIn .3s ease}
+.feedback.visible{display:block}
+.feedback.correct{border-left-color:var(--green)}
+.feedback.wrong  {border-left-color:var(--red)}
+.fb-title{font-weight:bold;font-size:.88rem;margin-bottom:5px}
+.feedback.correct .fb-title{color:var(--green)}
+.feedback.wrong   .fb-title{color:var(--red)}
+.code-snippet{background:#0a0a0a;border:2px solid var(--border);padding:8px 12px;font-family:"Courier New",monospace;font-size:.8rem;color:#abb2bf;margin-top:8px;display:block;white-space:pre;overflow-x:auto;line-height:1.6}
+#btn-continue{display:none;padding:10px 24px;font-size:.88rem;font-weight:900;font-family:var(--pixel);cursor:pointer;border:3px solid var(--green);background:#001a00;color:var(--green);letter-spacing:2px;text-transform:uppercase;animation:slideIn .3s ease}
+#btn-continue:hover{background:var(--green);color:#000}
+.meta-box{width:100%;background:#0f0f25;border:3px solid var(--purple);padding:14px;font-size:.86rem;line-height:1.6;display:none}
+.meta-box.visible{display:block;animation:slideIn .4s ease}
+.meta-label{font-size:.68rem;color:var(--purple);letter-spacing:2px;font-weight:bold;display:block;margin-bottom:8px}
+.meta-ta{width:100%;min-height:80px;background:#0a0a1a;border:2px solid var(--border);color:var(--white);font-family:var(--pixel);font-size:.82rem;padding:8px;resize:vertical;margin-top:8px}
+.meta-ta:focus{outline:none;border-color:var(--purple)}
+.py-box{background:#0a0a0a;border:2px solid var(--border);padding:10px 14px;font-family:"Courier New",monospace;font-size:.82rem;color:#abb2bf;width:100%;white-space:pre;overflow-x:auto;line-height:1.6}
+.py-kw{color:#c678dd}.py-fn{color:#61afef}.py-num{color:#d19a66}
+.py-cm{color:#5c6370;font-style:italic}.py-hl{background:#2a2a00;color:var(--yellow)}
+/* CODE SCREEN */
+#screen-code{padding:0 10px 20px}
+.code-area{width:100%;background:var(--panel);padding:18px;display:flex;flex-direction:column;gap:14px}
+.test-arrays{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.arr-box-sm{background:#0a0a1a;border:2px solid var(--border);padding:10px}
+.arr-box-sm .abl{font-size:.65rem;color:var(--gray);letter-spacing:2px;margin-bottom:6px;display:block}
+.arr-vals{display:flex;gap:5px;flex-wrap:wrap}
+.av{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:2px solid var(--border);font-weight:bold;background:#1a1a3a;font-size:.95rem}
+.av.exp{border-color:var(--green);color:var(--green);background:#002a0a}
+.code-ta{width:100%;min-height:200px;background:#0d0d0d;border:3px solid var(--border);color:#abb2bf;font-family:"Courier New",monospace;font-size:.88rem;line-height:1.7;padding:12px;resize:vertical;tab-size:4}
+.code-ta:focus{outline:none;border-color:var(--blue)}
+.code-ta.ok {border-color:var(--green)}
+.code-ta.err{border-color:var(--red)}
+.code-blanks-wrap{background:#0a0a0a;border:2px solid var(--border);padding:12px 14px;font-family:"Courier New",monospace;font-size:.85rem;color:#abb2bf;line-height:2.2}
+.cb-input{display:inline-block;background:#1a1a3a;border:2px solid var(--yellow);color:var(--yellow);font-family:"Courier New",monospace;font-size:.82rem;padding:2px 6px;width:100px;text-align:center;vertical-align:middle}
+.cb-input:focus{outline:none;box-shadow:0 0 6px var(--yellow)}
+.cb-input.ok {border-color:var(--green);color:var(--green);background:#002a0a}
+.cb-input.err{border-color:var(--red);color:var(--red);background:#2a0000}
+.out-box{display:none;background:#0a0a0a;border:3px solid var(--border);padding:12px;font-size:.85rem;line-height:1.7;animation:slideIn .3s ease}
+.out-box.visible{display:block}
+.out-box.ok  {border-color:var(--green)}
+.out-box.err {border-color:var(--red)}
+.out-box.pyerr{border-color:var(--orange)}
+.out-title{font-weight:bold;font-size:.88rem;margin-bottom:6px}
+.out-box.ok  .out-title{color:var(--green)}
+.out-box.err .out-title{color:var(--red)}
+.out-box.pyerr .out-title{color:var(--orange)}
+.hint-box{display:none;background:#0f0f25;border-left:6px solid var(--purple);padding:12px;font-size:.84rem;line-height:1.6;animation:slideIn .3s ease}
+.hint-box.visible{display:block}
+.sol-box{display:none;background:#0a0a0a;border:3px solid var(--gray);padding:12px;font-size:.82rem;margin-top:6px}
+.sol-box.visible{display:block}
+/* END */
+#screen-end{text-align:center;padding:20px 10px;max-width:720px;margin:0 auto}
+.final-score{font-size:3rem;color:var(--yellow);font-weight:900;text-shadow:4px 4px 0 var(--orange);margin:8px 0}
+.rank-b{display:inline-block;padding:7px 20px;font-size:.95rem;font-weight:bold;letter-spacing:3px;margin:6px 0 14px}
+.concepts-box{background:var(--panel);padding:14px;text-align:left;margin-bottom:14px;font-size:.84rem;line-height:1.8}
+.concepts-box h3{color:var(--green);margin-bottom:8px;letter-spacing:2px}
+.ci::before{content:"✔ ";color:var(--green)}
+.transfer-b{background:#0f0f25;border:3px solid var(--blue);padding:14px;text-align:left;margin-bottom:14px;font-size:.86rem;line-height:1.7}
+.transfer-b h3{color:var(--blue);margin-bottom:8px;letter-spacing:2px}
+@media(max-width:600px){
+  .options-grid{grid-template-columns:1fr}
+  .arr-cell{width:44px;height:44px;font-size:1.1rem}
+  .test-arrays{grid-template-columns:1fr}
+  .btn{padding:10px 18px;font-size:.82rem}
+}
+/* STORY SCREEN */
+#screen-story{text-align:center;padding:20px 10px;min-height:100vh;justify-content:center}
+.story-panel{background:var(--panel);border:3px solid;padding:14px 18px;font-size:.85rem;line-height:2;text-align:left;margin-bottom:14px;max-width:640px;width:100%}
+.story-error{color:var(--orange);font-family:"Courier New",monospace;font-size:.8rem}
+.story-label{font-weight:bold;letter-spacing:2px;margin-bottom:8px;display:block;font-size:.78rem}
+/* BARREL GAME SCREEN */
+#screen-barrel{padding:10px;align-items:center;gap:12px}
+.barrel-header{text-align:center;width:100%}
+.barrel-title{font-size:clamp(1.4rem,5vw,2.2rem);font-weight:900;color:var(--red);text-shadow:3px 3px 0 #7b0000,5px 5px 0 #000;letter-spacing:3px;animation:glow .6s ease infinite}
+.barrel-sub{font-size:.82rem;color:var(--orange);letter-spacing:2px;margin-top:4px}
+#barrel-canvas{display:block;width:100%;max-width:860px;border:4px solid var(--orange);box-shadow:0 0 24px #f5a62366,4px 4px 0 #000;cursor:pointer;image-rendering:pixelated}
+.barrel-hud-row{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:860px;padding:4px 8px;background:var(--panel);border:2px solid var(--border)}
+#barrel-lives{font-size:1.3rem;letter-spacing:2px}
+#barrel-count{font-size:.78rem;color:var(--yellow);font-family:var(--pixel);letter-spacing:2px}
+#barrel-msg{font-size:.8rem;color:var(--gray);letter-spacing:2px;min-height:20px}
+.barrel-hint{font-size:.74rem;color:var(--gray);letter-spacing:1px;opacity:.7}
+#barrel-overlay{display:none;background:var(--panel);border:3px solid var(--red);padding:18px;max-width:400px;width:90%;text-align:center;animation:slideIn .3s ease}
+#barrel-overlay-title{font-size:1.3rem;font-weight:bold;margin-bottom:8px}
+#barrel-overlay-msg{font-size:.82rem;color:var(--gray);margin-bottom:14px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- STORY INTRO SCREEN -->
+<div id="screen-story" class="screen">
+  <div style="text-align:center;max-width:660px;padding:20px 10px;display:flex;flex-direction:column;align-items:center;gap:0">
+    <div style="color:var(--red);font-size:.82rem;letter-spacing:4px;margin-bottom:10px" class="blink">⚠ CRITICAL SYSTEM FAILURE ⚠</div>
+    <div class="game-title" style="font-size:clamp(2rem,8vw,3rem)">BUBBLE KONG</div>
+    <div style="font-size:.82rem;color:var(--orange);letter-spacing:2px;margin-bottom:18px">IB CS SL B2.4 — SYSTEM RESTORATION MISSION</div>
+    <div class="story-panel pixel-border" style="border-color:var(--red)">
+      <span class="story-label" style="color:var(--red)">▸ INCIDENT REPORT — ERROR LOG:</span>
+      <div class="story-error">ERROR 0x504 ········ Memory arrays: CORRUPTED</div>
+      <div class="story-error">ERROR 0xB24 ········ Sort protocol: OFFLINE</div>
+      <div class="story-error">ERROR 0xD0C ········ Unknown entity: THROWING BARRELS</div>
+      <div style="color:var(--gray);margin-top:10px;font-size:.83rem;line-height:1.7">
+        Cause: A <strong style="color:var(--red)">GIANT BUG</strong> has invaded the system.<br>
+        All memory arrays are jumbled and unsorted.<br>
+        Data cascades into chaos. The system is failing.
+      </div>
+    </div>
+    <div class="story-panel pixel-border" style="border-color:var(--yellow)">
+      <span class="story-label" style="color:var(--yellow)">▸ MISSION BRIEFING:</span>
+      <div style="color:var(--white);font-size:.84rem;line-height:1.8">
+        You are <strong style="color:var(--yellow)">THE CODER</strong> — the only one who can fix this.<br>
+        Climb <strong style="color:var(--green)">8 System Layers</strong>, master the <strong style="color:var(--green)">Bubble Sort</strong> algorithm,<br>
+        and patch the corrupted memory arrays.
+      </div>
+      <div style="margin-top:10px;padding:8px;background:#1a1000;border-left:4px solid var(--orange);font-size:.82rem;line-height:1.7;color:var(--orange)">
+        ⚠ WARNING: The Bug throws <strong>barrels of corrupted data</strong> to stop you.<br>
+        You must <strong>jump over them</strong> to unlock the next layer.
+      </div>
+    </div>
+    <div class="story-panel pixel-border" style="border-color:var(--blue);font-size:.8rem;line-height:1.7;color:var(--gray)">
+      <span class="story-label" style="color:var(--blue)">▸ CONTROLS:</span>
+      <span>Lessons: <strong style="color:var(--white)">Click / ENTER</strong> to answer and continue</span><br>
+      <span>Barrel game: <strong style="color:var(--white)">← → move · ↑ climb · SPACE/↑ jump</strong></span>
+    </div>
+    <div class="story-panel pixel-border" style="border-color:var(--green);margin-bottom:10px">
+      <span class="story-label" style="color:var(--green)">▸ IDENTIFY YOURSELF, CODER:</span>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:.8rem;color:var(--gray);min-width:60px">NAME:</span>
+          <input id="player-name-input" type="text" placeholder="Enter your name" maxlength="20"
+            style="background:#1a1a3a;border:2px solid var(--yellow);color:var(--yellow);font-family:'Courier New',monospace;font-size:.9rem;padding:6px 12px;width:190px;outline:none"
+            onkeydown="if(event.key==='Enter') startMission()">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:.8rem;color:var(--gray);min-width:60px">CHARACTER:</span>
+          <button id="btn-gender-m" class="btn btn-blue" onclick="selectGender('m')" style="padding:6px 16px;font-size:.85rem">👦 HIM</button>
+          <button id="btn-gender-f" class="btn btn-purple" onclick="selectGender('f')" style="padding:6px 16px;font-size:.85rem;opacity:.4">👧 HER</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:4px">
+      <button class="btn" onclick="startMission()">▶ START MISSION</button>
+    </div>
+    <div style="font-size:.65rem;color:var(--gray);margin-top:12px">DP1 · Python · B2.4 Algorithms · Estimated time: full session</div>
+    <div style="font-size:.6rem;color:#4a4a7a;margin-top:6px">Created by Pablo Robayo · IB CS SL 2027</div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-b"><span class="hud-l">LEVEL</span><span class="hud-v" id="hud-level">0/7</span></div>
+  <div class="hud-b"><span class="hud-l">QUESTION</span><span class="hud-v" id="hud-q">1/5</span></div>
+  <div class="hud-b"><span class="hud-l">SCORE</span><span class="hud-v" id="hud-score">00000</span></div>
+  <div class="hud-b"><span class="hud-l">STREAK</span><span class="hud-v" id="hud-streak">0🔥</span></div>
+  <div class="hud-b"><span class="hud-l">ERRORS</span><span class="hud-v" id="hud-err">0</span></div>
+  <div class="hud-b"><button id="snd-btn" onclick="toggleSound()" title="Toggle sound" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;padding:0;color:var(--yellow)">🔊</button></div>
+</div>
+
+<!-- MAP -->
+<div id="screen-map" class="screen">
+  <div class="game-title">BUBBLE KONG</div>
+  <div class="game-subtitle">▶ SYSTEM RESTORATION MISSION ◀</div>
+  <div class="kong-art">🦍</div>
+  <div style="background:#1a0000;border:2px solid var(--red);padding:7px 14px;font-size:.78rem;color:var(--red);max-width:540px;text-align:center;letter-spacing:1px;margin-bottom:8px">
+    🐛 THE BUG is corrupting memory. Patch each Layer to restore the system.
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:8px">
+    <span class="ib-tag">B2.4 ALGORITHMS</span>
+    <span class="ib-tag">ARRAYS</span>
+    <span class="ib-tag">BUBBLE SORT</span>
+    <span class="ib-tag">BIG O</span>
+    <span class="ib-tag">PYTHON</span>
+  </div>
+  <p style="font-size:.78rem;color:var(--gray);text-align:center;margin-bottom:6px">
+    Each System Layer builds on the previous — from memory foundations to full implementation.<br>
+    Dodge the Bug's barrels between layers to advance.
+  </p>
+  <div class="level-map pixel-border" id="level-map"></div>
+  <p style="font-size:.68rem;color:var(--gray);margin-top:4px">DP1 | Python | Estimated time: full session</p>
+</div>
+
+<!-- GAME SCREEN (levels 0–5) -->
+<div id="screen-game" class="screen" style="width:100%;max-width:900px">
+  <div class="level-banner" id="game-banner">LEVEL 0</div>
+  <div class="game-area pixel-border">
+    <div class="q-progress" id="q-progress"></div>
+    <div class="kong-row">
+      <div class="kong-sprite" id="kong-sprite">🦍</div>
+      <div class="kong-bubble" id="kong-speech">…</div>
+    </div>
+    <div class="question-box pixel-border" id="question-box" style="border-color:var(--yellow)">
+      <span class="q-label" id="q-label">CONCEPT</span>
+      <div class="question-prompt" id="q-prompt"></div>
+      <div id="q-content"></div>
+    </div>
+    <div class="feedback" id="feedback">
+      <div class="fb-title" id="fb-title"></div>
+      <div id="fb-body"></div>
+    </div>
+    <button id="btn-continue" onclick="onContinue()">GOT IT → CONTINUE [ENTER]</button>
+    <div class="meta-box" id="meta-box">
+      <span class="meta-label">💬 METACOGNITIVE PAUSE</span>
+      <div id="meta-question"></div>
+      <textarea class="meta-ta" id="meta-ta" placeholder="Write your reflection here…"></textarea>
+    </div>
+  </div>
+  <div style="width:100%">
+    <div style="font-size:.65rem;color:var(--gray);letter-spacing:2px;margin-bottom:4px">▸ PYTHON CONTEXT CODE:</div>
+    <div class="py-box" id="py-context">…</div>
+  </div>
+</div>
+
+<!-- CODE SCREEN (levels 6–7) -->
+<div id="screen-code" class="screen" style="width:100%;max-width:900px">
+  <div class="level-banner" id="code-banner">LEVEL 6</div>
+  <div class="code-area pixel-border">
+    <div id="code-intro" style="background:#0f0f25;border-left:6px solid var(--green);padding:12px 14px;font-size:.86rem;line-height:1.6"></div>
+    <div class="test-arrays">
+      <div class="arr-box-sm"><span class="abl">▸ TEST ARRAY (input):</span><div class="arr-vals" id="code-in"></div></div>
+      <div class="arr-box-sm"><span class="abl">▸ EXPECTED OUTPUT:</span><div class="arr-vals" id="code-out"></div></div>
+    </div>
+    <div id="blanks-section">
+      <div style="font-size:.65rem;color:var(--gray);letter-spacing:2px;margin-bottom:6px">▸ FILL IN THE BLANKS:</div>
+      <div class="code-blanks-wrap pixel-border" id="blanks-display"></div>
+    </div>
+    <div id="editor-section" style="display:none">
+      <div style="font-size:.65rem;color:var(--gray);letter-spacing:2px;margin-bottom:6px">▸ PYTHON EDITOR — write your complete bubble_sort:</div>
+      <textarea class="code-ta" id="code-ta" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-green" onclick="runCode()">▶ RUN</button>
+      <button class="btn btn-purple" id="btn-hint" onclick="showHint()">💡 HINT (<span id="hints-left">3</span>)</button>
+      <span style="font-size:.72rem;color:var(--gray)">Attempts: <span id="run-cnt">0</span></span>
+    </div>
+    <div class="hint-box pixel-border" id="hint-box"></div>
+    <div class="out-box pixel-border" id="out-box"></div>
+    <div class="sol-box pixel-border" id="sol-box">
+      <div style="color:var(--gray);font-size:.75rem;letter-spacing:2px;margin-bottom:8px">▸ REFERENCE SOLUTION:</div>
+      <div class="py-box" style="margin:0">
+<span class="py-kw">def</span> <span class="py-fn">bubble_sort</span>(arr):
+    n = <span class="py-fn">len</span>(arr)
+    <span class="py-kw">for</span> i <span class="py-kw">in</span> <span class="py-fn">range</span>(n - <span class="py-num">1</span>):
+        <span class="py-kw">for</span> j <span class="py-kw">in</span> <span class="py-fn">range</span>(n - i - <span class="py-num">1</span>):
+            <span class="py-kw">if</span> arr[j] > arr[j + <span class="py-num">1</span>]:
+                arr[j], arr[j+<span class="py-num">1</span>] = arr[j+<span class="py-num">1</span>], arr[j]
+    <span class="py-kw">return</span> arr</div>
+      <p style="color:var(--gray);font-size:.78rem;margin-top:8px">Now close this box, clear your editor and try to write it from memory.</p>
+    </div>
+    <div id="code-continue-wrap" style="display:none;text-align:center;padding-top:6px">
+      <button class="btn" onclick="finishLevel()">▶ CONTINUE</button>
+    </div>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div id="screen-end" class="screen">
+  <div style="font-size:3.5rem;filter:drop-shadow(0 0 14px var(--yellow))">🏆</div>
+  <div style="font-size:.82rem;color:var(--green);letter-spacing:3px;margin-bottom:4px" class="blink">✔ SYSTEM RESTORED</div>
+  <div class="game-title" style="font-size:2.2rem"><span id="end-name-display"></span>BUG DEFEATED!</div>
+  <div style="font-size:.85rem;color:var(--gray);letter-spacing:2px;margin-bottom:6px">All memory arrays patched. Bubble Sort online.</div>
+  <div class="final-score" id="final-score">00000</div>
+  <div id="rank-disp" class="rank-b"></div>
+  <div class="concepts-box pixel-border">
+    <h3>✔ LEARNING PATH COMPLETE — CONCEPTS MASTERED</h3>
+    <div class="ci">Arrays: indices, length, access by position</div>
+    <div class="ci">Comparison: finding max and min with relational logic</div>
+    <div class="ci">Python swap: <code>a, b = b, a</code> without a temp variable</div>
+    <div class="ci">Bubble Sort: the visual concept of "bubbling up"</div>
+    <div class="ci">Outer loop: <code>for i in range(n-1)</code> — n-1 passes</div>
+    <div class="ci">Inner loop: <code>for j in range(n-i-1)</code> — optimization per pass</div>
+    <div class="ci">Faded code: completing blanks with real Python code</div>
+    <div class="ci">Full implementation: writing bubble_sort() from scratch</div>
+  </div>
+  <div class="transfer-b pixel-border">
+    <h3>🌍 TRANSFER CLOSURE</h3>
+    <p>Now that you've implemented Bubble Sort, why does Python have <code>sorted()</code> if we can write it ourselves?</p>
+    <textarea class="meta-ta" placeholder="Hint: think about Big O and arrays with millions of elements…"></textarea>
+    <br><br>
+    <p><strong style="color:var(--blue)">IB Connection:</strong> SQL uses <code>ORDER BY</code> to sort data. Now you know what's underneath. Which algorithm do you think a database with millions of rows uses? Why would it NOT be Bubble Sort?</p>
+    <textarea class="meta-ta" placeholder="Write your answer…" style="margin-top:8px"></textarea>
+  </div>
+  <button class="btn" onclick="showScreen('screen-map')">⟳ BACK TO MAP</button>
+</div>
+
+<!-- BARREL MINI-GAME SCREEN -->
+<div id="screen-barrel" class="screen">
+  <div class="barrel-header">
+    <div class="barrel-title">⚠ THE BUG ATTACKS!</div>
+    <div class="barrel-sub" id="barrel-sub">Dodge the corrupted data barrels to advance!</div>
+  </div>
+  <canvas id="barrel-canvas" width="860" height="320"></canvas>
+  <div class="barrel-hud-row pixel-border">
+    <div id="barrel-lives">❤️❤️❤️</div>
+    <div id="barrel-msg">GET READY...</div>
+    <div id="barrel-count">BARRELS: 0/3</div>
+  </div>
+  <div class="barrel-hint">← → &nbsp;move &nbsp;|&nbsp; ↑ / near ladder → climb &nbsp;|&nbsp; SPACE / ↑ (no ladder) → jump &nbsp;|&nbsp; reach the top to unlock next layer</div>
+  <div id="barrel-overlay">
+    <div id="barrel-overlay-title"></div>
+    <div id="barrel-overlay-msg"></div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-green" onclick="retryBarrelGame()">↺ RETRY</button>
+      <button class="btn btn-red" onclick="skipBarrelGame()">⚡ SKIP (−200 pts)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// LEVEL DEFINITIONS
+// ================================================================
+const LEVELS = [
+// ── LEVEL 0: ARRAY FUNDAMENTALS ─────────────────────────────────
+{
+  num:0, title:"ARRAY FUNDAMENTALS", sub:"Indices, positions, length",
+  icon:"📦", color:"#3498db", world:"LAYER 0 — MEMORY MAP SECTOR",
+  hook:"Kong filled a box with numbers. Can you find each one by its position?",
+  meta:"Why do you think Python arrays start at index 0 and not 1? What advantage does that have for loops and algorithms?",
+  py:`arr = [7, 3, 9, 1, 5]
+arr[0]   # → 7   (first element)
+arr[4]   # → 5   (last, index n-1)
+arr[-1]  # → 5   (last, index -1)
+len(arr) # → 5   (number of elements)`,
+  questions:[
+    { type:"click_array",
+      arr:[7,3,9,1,5],
+      prompt:"Array: <code>[7, 3, 9, 1, 5]</code>. Click on <strong>arr[0]</strong> (the first element).",
+      answer:0,
+      fb_ok:"Correct. <code>arr[0] = 7</code>. In Python, arrays start at index 0, not 1. arr[0] is always the very first element.",
+      fb_err:"Array indices in Python start at 0. The first element is at arr[0], the second at arr[1], and so on. Click on the 7." },
+    { type:"click_array",
+      arr:[7,3,9,1,5],
+      prompt:"Same array. Click on <strong>arr[4]</strong> (the last element).",
+      answer:4,
+      fb_ok:"Correct. <code>arr[4] = 5</code>. With 5 elements, the last one is at index 4 (n-1). Never arr[5] — that would raise an IndexError.",
+      fb_err:"With 5 elements (indices 0 to 4), the last element is at arr[4]. Remember: the maximum valid index is always <code>len(arr) - 1</code>." },
+    { type:"multiple_choice",
+      arr:[4,8,2,6,3],
+      prompt:"Array: <code>[4, 8, 2, 6, 3]</code>. How many elements does it have? What does <code>len(arr)</code> return?",
+      options:["3","4","5","6"],
+      answer:2,
+      fb_ok:"Correct. <code>len([4,8,2,6,3]) = 5</code>. The <code>len()</code> function counts all elements. We'll use it constantly inside Bubble Sort.",
+      fb_err:"Count the elements: 4, 8, 2, 6, 3 — that's 5. <code>len(arr)</code> returns 5. Essential for knowing how many times to iterate." },
+    { type:"click_array",
+      arr:[4,8,2,6,3],
+      prompt:"Array: <code>[4, 8, 2, 6, 3]</code>. Click on <strong>arr[2]</strong>.",
+      answer:2,
+      fb_ok:"Correct. <code>arr[2] = 2</code>. Counting from 0: arr[0]=4, arr[1]=8, arr[2]=2. The index is the POSITION, not the value.",
+      fb_err:"Count from 0: arr[0]=4, arr[1]=8, arr[2]=2. The index is the POSITION, not the value. arr[2] is the third element." },
+    { type:"multiple_choice",
+      arr:[10,20,30,40],
+      prompt:"Array: <code>[10, 20, 30, 40]</code>. What does <code>arr[-1]</code> return?",
+      options:["10 (the first)","−1 (error)","40 (the last)","30 (second to last)"],
+      answer:2,
+      fb_ok:"Correct. In Python, <code>arr[-1]</code> is always the last element. <code>arr[-2]</code> is the second to last, etc. Very handy to avoid writing <code>arr[len(arr)-1]</code>.",
+      fb_err:"Python allows negative indices. <code>arr[-1]</code> = last element = 40. It's equivalent to <code>arr[len(arr)-1]</code>." }
+  ]
+},
+// ── LEVEL 1: COMPARE — MAX AND MIN ──────────────────────────────
+{
+  num:1, title:"COMPARE: MAX AND MIN", sub:"The core operation of any sort",
+  icon:"⚖️", color:"#e67e22", world:"LAYER 1 — COMPARISON MODULE",
+  hook:"To sort, you first need to compare. Can you find the maximum and minimum?",
+  meta:"Finding the maximum traverses the array once: O(n). Why is Bubble Sort O(n²) then?",
+  py:`arr = [4, 7, 2, 9, 1]
+
+# Comparing two elements
+arr[1] > arr[2]   # 7 > 2 → True
+arr[0] > arr[4]   # 4 > 1 → True
+
+# Finding the max (manual)
+max_val = arr[0]
+for i in range(len(arr)):
+    if arr[i] > max_val:
+        max_val = arr[i]  # → 9`,
+  questions:[
+    { type:"click_array",
+      arr:[4,7,2,9,1],
+      prompt:"Array: <code>[4, 7, 2, 9, 1]</code>. Click on the <strong>maximum element</strong>.",
+      answer:3,
+      fb_ok:"Correct. The max is 9, at arr[3]. Finding it requires comparing every element — traversing the full array.",
+      fb_err:"The max is the highest value. Compare: 4, 7, 2, 9, 1 — the maximum is 9 (at arr[3])." },
+    { type:"click_array",
+      arr:[4,7,2,9,1],
+      prompt:"Same array. Click on the <strong>minimum element</strong>.",
+      answer:4,
+      fb_ok:"Correct. The min is 1, at arr[4]. Note: finding max/min requires seeing every element — that's O(n).",
+      fb_err:"The min is the lowest value. Compare all: 4, 7, 2, 9, 1 — the minimum is 1 (at arr[4])." },
+    { type:"multiple_choice",
+      arr:[3,6,1,8],
+      prompt:"Array: <code>[3, 6, 1, 8]</code>. Is <code>arr[1] &gt; arr[2]</code> true or false? (arr[1]=6, arr[2]=1)",
+      options:["True — 6 > 1","False — 6 < 1","True — 1 > 6","False — they are equal"],
+      answer:0,
+      fb_ok:"Correct. <code>arr[1]=6 > arr[2]=1</code> is True. This is exactly the comparison Bubble Sort makes at each step.",
+      fb_err:"arr[1]=6 and arr[2]=1. Is 6 > 1? Yes — it's True. This comparison between adjacent elements is the heart of Bubble Sort." },
+    { type:"multiple_choice",
+      arr:[3,6,1,8],
+      prompt:"Same array. Is <code>arr[0] &gt; arr[3]</code> true? (arr[0]=3, arr[3]=8)",
+      options:["True — 3 > 8","False — 3 < 8","True — both are positive","False — they are equal"],
+      answer:1,
+      fb_ok:"Correct. <code>3 > 8</code> is False. In Bubble Sort, if arr[j] < arr[j+1], the elements are already in order — KEEP, not SWAP.",
+      fb_err:"arr[0]=3 and arr[3]=8. Is 3 > 8? No — it's False. When the left element is smaller than the right, they are already in the correct order." },
+    { type:"multiple_choice",
+      arr:[5,2,8,1,6],
+      prompt:"Which Python fragment correctly identifies when to swap arr[j] and arr[j+1]?",
+      options:[
+        "if arr[j] < arr[j+1]:",
+        "if arr[j] > arr[j+1]:",
+        "if arr[j] == arr[j+1]:",
+        "if arr[j] >= arr[j+1]:"
+      ],
+      answer:1,
+      fb_ok:"Correct. <code>if arr[j] > arr[j+1]:</code> — if the left element is GREATER than the right, they are in the wrong order and need to be swapped.",
+      fb_err:"We want to sort in ascending order. Swap when the left is GREATER than the right: <code>arr[j] > arr[j+1]</code>." }
+  ]
+},
+// ── LEVEL 2: THE SWAP ────────────────────────────────────────────
+{
+  num:2, title:"THE SWAP", sub:"Exchanging two elements in Python",
+  icon:"🔄", color:"#e74c3c", world:"LAYER 2 — SWAP ENGINE",
+  hook:"Before sorting, you need to know how to swap. In Python it's elegant — no temporary variable needed.",
+  meta:"In other languages the swap needs a temp variable (temp = a; a = b; b = temp). Why doesn't Python need one?",
+  py:`# Python swap — in a single line
+arr = [8, 3, 5]
+arr[0], arr[1] = arr[1], arr[0]
+# arr is now [3, 8, 5]
+
+# The right side is evaluated FIRST
+# then assigned left to right`,
+  questions:[
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"<code>a = 5</code>, <code>b = 3</code>. After <code>a, b = b, a</code>, what is the value of <code>a</code>?",
+      options:["5 (unchanged)","3 (took b's value)","8 (sum)","Error"],
+      answer:1,
+      fb_ok:"Correct. After the swap, <code>a = 3</code> and <code>b = 5</code>. Python evaluates the entire right-hand side first, then assigns.",
+      fb_err:"The swap exchanges values. <code>a, b = b, a</code> → a takes b's value (3), and b takes a's value (5). a = 3." },
+    { type:"click_array_after_swap",
+      arr:[8,3,5],
+      swap_idx:[0,1],
+      prompt:"Array: <code>[8, 3, 5]</code>. <code>arr[0], arr[1] = arr[1], arr[0]</code> is executed. What does it look like now? Click on the new <strong>arr[0]</strong>.",
+      answer:1,
+      fb_ok:"Correct. After the swap: arr[0]=3, arr[1]=8, arr[2]=5 → <code>[3, 8, 5]</code>. The 8 and 3 exchanged positions.",
+      fb_err:"arr[0] and arr[1] are swapped. The 8 moves to arr[1] and the 3 moves to arr[0]. The new arr[0] is 3." },
+    { type:"fill_blank",
+      prompt:"Complete the swap. We have <code>arr[j]=7</code> and <code>arr[j+1]=2</code>:",
+      pre:"arr[j], arr[j+1] = ",
+      blank_count:2,
+      blanks:[{ph:"arr[?]",ans:["arr[j+1]"]},{ph:"arr[?]",ans:["arr[j]"]}],
+      separator:", ",
+      fb_ok:"Correct. <code>arr[j], arr[j+1] = arr[j+1], arr[j]</code>. The right side (2, 7) is evaluated as a tuple before the assignment. That's how Python swaps without a temp variable.",
+      fb_err:"The trick is to put the values in reverse order on the right side: <code>arr[j], arr[j+1] = arr[j+1], arr[j]</code>. The right side is evaluated first." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"When does Bubble Sort execute the swap <code>arr[j], arr[j+1] = arr[j+1], arr[j]</code>?",
+      options:[
+        "Always, on every comparison",
+        "Only when arr[j] > arr[j+1]",
+        "Only when arr[j] < arr[j+1]",
+        "At the end of each pass"
+      ],
+      answer:1,
+      fb_ok:"Correct. The swap only happens when <code>arr[j] > arr[j+1]</code> — the left element is greater than the right. If already in order, no swap occurs.",
+      fb_err:"The swap is conditional. It only happens if <code>arr[j] > arr[j+1]</code>. If the left is already smaller, there's nothing to swap." },
+    { type:"multiple_choice",
+      arr:[5,2,9,1,7],
+      prompt:"Array <code>[5, 2, 9, 1, 7]</code>. We compare arr[1]=2 and arr[2]=9. Is the swap executed?",
+      options:[
+        "Yes — 2 > 9 is True",
+        "No — 2 < 9, already in order",
+        "Yes — swap always happens",
+        "No — only at the end of the pass"
+      ],
+      answer:1,
+      fb_ok:"Correct. <code>arr[1]=2 < arr[2]=9</code>, the condition <code>arr[j] > arr[j+1]</code> is False — no swap. The 2 is already before the 9.",
+      fb_err:"We compare 2 and 9. Is 2 > 9? No — so the condition is False and there is NO swap. They are already in the correct order (smaller before larger)." }
+  ]
+},
+// ── LEVEL 3: WHAT DOES BUBBLE SORT DO? ──────────────────────────
+{
+  num:3, title:"WHAT DOES BUBBLE SORT DO?", sub:"The concept before the code",
+  icon:"🫧", color:"#2ecc71", world:"LAYER 3 — SORT PROTOCOL",
+  hook:"You already know how to compare and swap. Now let's see what Bubble Sort does as a complete algorithm.",
+  meta:"It's called 'Bubble Sort' because large values 'bubble up' to the end. Which number will always end up last after any first pass?",
+  py:`# Bubble Sort — first pass on [5, 3, 8, 1, 7]
+# Step 1: arr[0]=5 vs arr[1]=3 → 5>3 → SWAP → [3,5,8,1,7]
+# Step 2: arr[1]=5 vs arr[2]=8 → 5<8 → KEEP → [3,5,8,1,7]
+# Step 3: arr[2]=8 vs arr[3]=1 → 8>1 → SWAP → [3,5,1,8,7]
+# Step 4: arr[3]=8 vs arr[4]=7 → 8>7 → SWAP → [3,5,1,7,8]
+# Result: 8 (the max) reached the end ✓`,
+  questions:[
+    { type:"multiple_choice",
+      arr:[5,3,8,1,7],
+      prompt:"Array: <code>[5, 3, 8, 1, 7]</code>. After a complete <strong>first pass</strong> of Bubble Sort, which number will be at the end (arr[4])?",
+      options:["7","5","8 (the max)","1"],
+      answer:2,
+      fb_ok:"Correct. The 8 (the max) always 'bubbles' to the end in the first pass. Bubble Sort guarantees that after k passes, the k largest elements are in their final position.",
+      fb_err:"In Bubble Sort, the largest number always reaches the end during the first pass. 8 is the max of [5,3,8,1,7] and will end up at arr[4]." },
+    { type:"multiple_choice",
+      arr:[5,3,8,1,7],
+      prompt:"Array <code>[5,3,8,1,7]</code>: first pass. How many <strong>comparisons</strong> are made?",
+      options:["3","4","5","8"],
+      answer:1,
+      fb_ok:"Correct. In the first pass, 4 pairs are compared: (0,1), (1,2), (2,3), (3,4) → 4 comparisons (n-1 = 5-1 = 4).",
+      fb_err:"In a 5-element array, 4 adjacent pairs are compared: (arr[0],arr[1]), (arr[1],arr[2]), (arr[2],arr[3]), (arr[3],arr[4]) → 4 comparisons." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"Why is it called <strong>'Bubble Sort'</strong>?",
+      options:[
+        "Because it is very slow, like slow bubbles",
+        "Because large values 'bubble up' to the end in each pass",
+        "Because it uses RAM memory bubbles",
+        "Because it was invented at a software company"
+      ],
+      answer:1,
+      fb_ok:"Correct. Large values 'rise' toward the end of the array, like bubbles rising in a liquid. After each pass, the current maximum is in its final position.",
+      fb_err:"The name comes from the movement: large values 'bubble' (shift) toward the end in each pass, like bubbles rising to the surface." },
+    { type:"multiple_choice",
+      arr:[5,3,8,1,7],
+      prompt:"Array of <strong>5 elements</strong>. How many passes does Bubble Sort need <strong>at most</strong>?",
+      options:["5 passes","4 passes (n-1)","3 passes","10 passes (n²)"],
+      answer:1,
+      fb_ok:"Correct. It needs n-1 = 4 passes at most. After n-1 passes all elements are in place. The last position sorts itself.",
+      fb_err:"Bubble Sort always needs n-1 passes at most. With 5 elements: 4 passes. After n-1 passes the array is guaranteed to be sorted." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"After the <strong>2nd pass</strong> of Bubble Sort, how many elements are guaranteed in their final position?",
+      options:["Only 1","2 (the 2 largest)","3","All of them"],
+      answer:1,
+      fb_ok:"Correct. After k passes, k elements are in their final position (the k largest). After 2 passes: the 2 largest are at the end. That's why the inner loop can shrink each pass.",
+      fb_err:"After k passes, k elements are in their final position — the k largest ones. After 2 passes: 2 elements placed permanently at the end." }
+  ]
+},
+// ── LEVEL 4: THE OUTER LOOP ──────────────────────────────────────
+{
+  num:4, title:"THE OUTER LOOP", sub:"for i in range(n - 1)",
+  icon:"🔁", color:"#9b59b6", world:"LAYER 4 — LOOP CORE ALPHA",
+  hook:"Bubble Sort needs to repeat the passes. The outer loop controls how many times.",
+  meta:"The outer loop uses range(n-1), not range(n). What would happen if you used range(n)? Would it be an error or just unnecessary work?",
+  py:`def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):  # ← OUTER LOOP
+        # 'i' = pass number (0, 1, 2, …)
+        # n-1 passes are always enough
+        # by pass i, the last i elements
+        # are already sorted
+        pass  # (inner loop goes here)
+    return arr`,
+  questions:[
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"For an array of <strong>n=6</strong> elements, how many passes does Bubble Sort need at most?",
+      options:["6 passes","5 passes (n-1)","3 passes","12 passes"],
+      answer:1,
+      fb_ok:"Correct. n-1 = 5 passes. After the 5th pass all elements are in place. The last position always sorts itself.",
+      fb_err:"It's always n-1 passes. With n=6: 5 passes. After n-1 passes the array is guaranteed to be sorted." },
+    { type:"fill_blank",
+      prompt:"Complete the outer loop of Bubble Sort for an array of size <code>n</code>:",
+      pre:"for i in range(",
+      blank_count:1,
+      blanks:[{ph:"what goes here?",ans:["n - 1","n-1","n- 1","n -1"]}],
+      separator:"",
+      post:"):",
+      fb_ok:"Correct. <code>for i in range(n - 1):</code>. With n elements we need n-1 passes. The range goes from 0 to n-2 (inclusive).",
+      fb_err:"The outer loop needs n-1 iterations: <code>for i in range(n - 1)</code>. range(n-1) generates values 0, 1, 2, …, n-2." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"In pass <strong>i=2</strong> of a 7-element array, how many elements are already in their final position?",
+      options:["0 (none yet)","1","2 (the 2 largest)","7"],
+      answer:2,
+      fb_ok:"Correct. After i completed passes, the i largest elements are at the end. In i=2: the 2 largest are already placed.",
+      fb_err:"After pass i, the last i elements are in their final position. Before pass i=2 (passes 0 and 1 complete): 2 elements are permanently placed." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"What is the value of <code>i</code> in the <strong>first</strong> execution of the outer loop?",
+      options:["i = 1","i = 0","i = n-1","i = n"],
+      answer:1,
+      fb_ok:"Correct. <code>range(n-1)</code> starts at 0. The first pass is i=0, the second i=1, up to i=n-2.",
+      fb_err:"<code>range(n-1)</code> generates: 0, 1, 2, …, n-2. The first iteration is i=0. In Python, range always starts at 0 by default." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"Which of these outer loops is <strong>correct</strong> for Bubble Sort with an array of size n?",
+      options:[
+        "for i in range(n):",
+        "for i in range(1, n):",
+        "for i in range(n - 1):",
+        "for i in range(n + 1):"
+      ],
+      answer:2,
+      fb_ok:"Correct. <code>for i in range(n - 1):</code>. Generates exactly n-1 iterations (0 to n-2) — the exact number of passes needed.",
+      fb_err:"<code>for i in range(n-1):</code> is correct — n-1 iterations. range(n) adds an unnecessary extra pass. range(1,n) starts at i=1, breaking the inner loop's optimization." }
+  ]
+},
+// ── LEVEL 5: THE INNER LOOP ──────────────────────────────────────
+{
+  num:5, title:"THE INNER LOOP", sub:"for j in range(n - i - 1)",
+  icon:"🔂", color:"#f39c12", world:"LAYER 5 — LOOP CORE BETA",
+  hook:"The inner loop performs the comparisons within each pass. Its range shrinks with every pass — why?",
+  meta:"The inner loop makes range(n-i-1) comparisons in pass i. How many total comparisons does Bubble Sort make with n=5? Calculate using the formula n*(n-1)/2 and also by summing each pass manually.",
+  py:`def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):  # ← INNER LOOP
+            # j goes from 0 to (n-i-2)
+            # Pass i=0: j in range(n-1)   → n-1 comparisons
+            # Pass i=1: j in range(n-2)   → n-2 comparisons
+            # Each pass makes ONE fewer comparison
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j+1] = arr[j+1], arr[j]`,
+  questions:[
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"Array of <strong>n=5</strong>. In pass <strong>i=0</strong> (first pass), how many comparisons does the inner loop make?",
+      options:["5","4 (n-1)","3","2"],
+      answer:1,
+      fb_ok:"Correct. Pass i=0: <code>range(n - 0 - 1) = range(4)</code> → 4 comparisons (j = 0, 1, 2, 3).",
+      fb_err:"Pass i=0: <code>range(n - i - 1) = range(5 - 0 - 1) = range(4)</code> → j takes values 0, 1, 2, 3 → 4 comparisons." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"Same array n=5. In pass <strong>i=2</strong> (third pass), how many comparisons?",
+      options:["4","3","2 (n-i-1 = 5-2-1)","1"],
+      answer:2,
+      fb_ok:"Correct. <code>range(5 - 2 - 1) = range(2)</code> → 2 comparisons. Each pass does one fewer because the last i elements are already sorted.",
+      fb_err:"<code>range(n - i - 1) = range(5 - 2 - 1) = range(2)</code> → j = 0, 1 → 2 comparisons. Each pass we do one fewer." },
+    { type:"fill_blank",
+      prompt:"Complete the inner loop. In pass <code>i</code>, we compare up to before the already-sorted elements:",
+      pre:"for j in range(n - ",
+      blank_count:1,
+      blanks:[{ph:"which variable?",ans:["i"]}],
+      separator:"",
+      post:" - 1):",
+      fb_ok:"Correct. <code>for j in range(n - i - 1):</code>. The <code>-i</code> skips the last i elements that are already in their final position.",
+      fb_err:"The missing variable is <code>i</code>. <code>range(n - i - 1)</code> — we subtract i because the last i elements are already sorted and don't need checking." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"Why does the inner loop use <code>range(n - i - 1)</code> instead of simply <code>range(n - 1)</code>?",
+      options:[
+        "It's a mistake — it should always be range(n-1)",
+        "To avoid comparing elements already in their final position",
+        "Because Python requires subtracting i from all ranges",
+        "To make the loop faster by coincidence"
+      ],
+      answer:1,
+      fb_ok:"Correct. After pass i, the last i elements are already in their final place. The inner loop reduces its work each pass — this is the key optimization of Bubble Sort.",
+      fb_err:"The optimization: after pass i, the last i elements are sorted and don't need checking. Using <code>range(n-i-1)</code> saves unnecessary comparisons." },
+    { type:"multiple_choice",
+      arr:null,
+      prompt:"Which is the <strong>correct and complete</strong> code for the two nested loops of Bubble Sort?",
+      options:[
+        "for i in range(n):\n  for j in range(n):",
+        "for i in range(n-1):\n  for j in range(n-i-1):",
+        "for i in range(n-1):\n  for j in range(n-1):",
+        "for i in range(n):\n  for j in range(n-i-1):"
+      ],
+      answer:1,
+      fb_ok:"Correct. <code>for i in range(n-1)</code> controls the passes (n-1 total), and <code>for j in range(n-i-1)</code> controls the comparisons within each pass, shrinking with each pass.",
+      fb_err:"The correct answer uses <code>for i in range(n-1)</code> for passes and <code>for j in range(n-i-1)</code> for comparisons. The inner loop must shrink with i to avoid checking already-sorted elements." }
+  ]
+}
+];
+
+// CODE TEST DATA
+const CODE_TEST_ARR = [5,2,8,1,9,3,6];
+const CODE_EXPECTED = [...CODE_TEST_ARR].sort((a,b)=>a-b);
+
+const BLANKS_LEVEL6 = [
+  {id:"b0", ans:["n-1","n - 1","n- 1"], label:"n-1"},
+  {id:"b1", ans:["i"],                   label:"i"},
+  {id:"b2", ans:[">"],                   label:">"},
+  {id:"b3", ans:["arr[j+1]","arr[j + 1]"], label:"arr[j+1]"},
+  {id:"b4", ans:["arr[j]"],              label:"arr[j]"}
+];
+
+const HINTS_6 = [
+  "The outer loop repeats n-1 times: <code>range(n - 1)</code>. Think back to Level 4.",
+  "The inner loop uses <code>range(n - i - 1)</code>. The variable from Level 5 was <code>i</code>.",
+  "The condition is <code>></code> (greater than). The swap: <code>arr[j], arr[j+1] = arr[j+1], arr[j]</code>."
+];
+const HINTS_7 = [
+  "Structure: <code>def bubble_sort(arr):</code> → <code>n = len(arr)</code> → two nested loops → <code>return arr</code>.",
+  "Outer loop: <code>for i in range(n-1):</code> &nbsp;&nbsp; Inner loop: <code>for j in range(n-i-1):</code>",
+  "Inside the inner loop: <code>if arr[j] > arr[j+1]:</code> → <code>arr[j], arr[j+1] = arr[j+1], arr[j]</code>"
+];
+
+// ================================================================
+// STATE
+// ================================================================
+let G = {
+  levelIdx:0, qIdx:0, score:0, streak:0,
+  totalErrors:0, levelErrors:0,
+  awaitMeta:false, awaitContinue:false,
+  hintIdx:0, runCnt:0, isCodeLevel:false
+};
+const unlocked  = new Set([0]);
+const completed = new Set();
+
+// ── Player profile ───────────────────────────────────────────────
+let PLAYER = { name:'Coder', gender:'m', bodyColor:'#2980b9', armColor:'#1a6ea8', hairColor:null };
+
+function selectGender(g){
+  PLAYER.gender     = g;
+  PLAYER.bodyColor  = g==='f' ? '#8e44ad' : '#2980b9';
+  PLAYER.armColor   = g==='f' ? '#7d3c98' : '#1a6ea8';
+  PLAYER.hairColor  = g==='f' ? '#e74c3c' : null;
+  document.getElementById('btn-gender-m').style.opacity = g==='m' ? '1' : '0.4';
+  document.getElementById('btn-gender-f').style.opacity = g==='f' ? '1' : '0.4';
+}
+
+function startMission(){
+  const inp = document.getElementById('player-name-input');
+  const n   = inp.value.trim();
+  if(!n){ inp.style.borderColor='var(--red)'; inp.focus(); return; }
+  PLAYER.name = n;
+  buildMap(); showScreen('screen-map');
+}
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function buildMap(){
+  const container = document.getElementById('level-map');
+  container.innerHTML='';
+  const allLevels = [
+    ...LEVELS,
+    {num:6,title:"PATCH ASSEMBLY",sub:"Fill in the 5 key gaps to complete the algorithm",icon:"📝",color:"#16a085"},
+    {num:7,title:"FINAL PATCH DEPLOY",sub:"Write the complete bubble_sort() from memory",icon:"💻",color:"#8e44ad"}
+  ];
+  allLevels.forEach(lv=>{
+    const row   = document.createElement('div');
+    const isDone    = completed.has(lv.num);
+    const isCurrent = !isDone && unlocked.has(lv.num);
+    const isLocked  = !unlocked.has(lv.num) && !completed.has(lv.num);
+    row.className = 'map-row pixel-border' + (isDone?' done':isCurrent?' current':isLocked?' locked':'');
+    if(!isLocked) row.addEventListener('click',()=>startLevel(lv.num));
+    row.innerHTML=`
+      <div class="map-num" style="color:${isLocked?'#555':lv.color}">${lv.num}</div>
+      <div style="flex:1">
+        <div class="map-title" style="color:${isLocked?'#555':lv.color}">${lv.icon} ${lv.title}</div>
+        <div class="map-subtitle">${lv.sub}</div>
+      </div>
+      <div class="map-status">${isDone?'✔ DONE':isCurrent?'▶ PLAY':isLocked?'🔒':''}</div>`;
+    container.appendChild(row);
+  });
+}
+
+function updateHUD(){
+  const qs = LEVELS[G.levelIdx]?.questions?.length||5;
+  document.getElementById('hud-level').textContent  = `${G.levelIdx}/7`;
+  document.getElementById('hud-q').textContent      = G.isCodeLevel?'—':`${G.qIdx+1}/${qs}`;
+  document.getElementById('hud-score').textContent  = String(G.score).padStart(5,'0');
+  document.getElementById('hud-streak').textContent = `${G.streak}🔥`;
+  document.getElementById('hud-err').textContent    = G.totalErrors;
+}
+
+// ================================================================
+// START LEVEL
+// ================================================================
+function startLevel(num){
+  G.levelIdx=num; G.qIdx=0; G.levelErrors=0;
+  G.awaitMeta=false; G.awaitContinue=false;
+  G.isCodeLevel = num>=6;
+  document.getElementById('hud').classList.add('visible');
+  updateHUD();
+  if(num>=6){ startCodeLevel(num); return; }
+  const lv=LEVELS[num];
+  const banner=document.getElementById('game-banner');
+  banner.textContent=lv.world;
+  banner.style.background=`linear-gradient(90deg,${lv.color}44,${lv.color}22,${lv.color}44)`;
+  showScreen('screen-game');
+  hideFeedback(); hideMeta();
+  document.getElementById('btn-continue').style.display='none';
+  renderQuestion();
+}
+
+// ================================================================
+// RENDER QUESTION
+// ================================================================
+function renderQuestion(){
+  const lv=LEVELS[G.levelIdx];
+  const q=lv.questions[G.qIdx];
+  renderDots(lv.questions.length);
+
+  const kongsays=[
+    `Think carefully, ${PLAYER.name}.`,
+    "Remember what we covered in previous levels.",
+    "Are you sure? Take your time.",
+    "Connect what you know — the answer is within reach.",
+    "Almost there — keep going!"
+  ];
+  document.getElementById('kong-speech').textContent =
+    G.qIdx===0 ? lv.hook : kongsays[G.qIdx%kongsays.length];
+
+  const qbox=document.getElementById('question-box');
+  qbox.style.borderColor=lv.color;
+  document.getElementById('q-label').textContent=`LEVEL ${lv.num} — ${lv.title}`;
+  document.getElementById('q-label').style.color=lv.color;
+  document.getElementById('q-prompt').innerHTML=q.prompt;
+  document.getElementById('py-context').innerHTML=syntaxHL(lv.py);
+
+  const content=document.getElementById('q-content');
+  content.innerHTML='';
+  if(q.type==='click_array'||q.type==='click_array_after_swap') renderArrayClickable(content,q);
+  else if(q.type==='multiple_choice'){ if(q.arr) renderArrayStatic(content,q.arr); renderOptions(content,q); }
+  else if(q.type==='fill_blank') renderFillBlank(content,q);
+
+  hideFeedback();
+  document.getElementById('btn-continue').style.display='none';
+}
+
+function renderDots(total){
+  const c=document.getElementById('q-progress'); c.innerHTML='';
+  for(let i=0;i<total;i++){
+    const d=document.createElement('div');
+    d.className='q-dot'+(i<G.qIdx?' done':i===G.qIdx?' current':'');
+    c.appendChild(d);
+  }
+}
+function renderArrayStatic(parent,arr,hl=[]){
+  const row=document.createElement('div'); row.className='arr-display';
+  arr.forEach((v,i)=>{
+    const w=document.createElement('div'); w.className='arr-wrap';
+    const idx=document.createElement('div'); idx.className='arr-idx'; idx.textContent=`arr[${i}]`;
+    const cell=document.createElement('div'); cell.className='arr-cell'+(hl.includes(i)?' highlight':'');
+    cell.textContent=v; w.appendChild(idx); w.appendChild(cell); row.appendChild(w);
+  });
+  parent.appendChild(row);
+}
+function renderArrayClickable(parent,q){
+  const row=document.createElement('div'); row.className='arr-display';
+  q.arr.forEach((v,i)=>{
+    const w=document.createElement('div'); w.className='arr-wrap';
+    const idx=document.createElement('div'); idx.className='arr-idx'; idx.textContent=`arr[${i}]`;
+    const cell=document.createElement('div'); cell.className='arr-cell clickable'; cell.id=`qcell-${i}`;
+    cell.textContent=v;
+    cell.addEventListener('click',()=>handleClickArray(i,q));
+    w.appendChild(idx); w.appendChild(cell); row.appendChild(w);
+  });
+  parent.appendChild(row);
+  if(q.type==='click_array_after_swap'){
+    const hint=document.createElement('div');
+    hint.style.cssText='font-size:.78rem;color:var(--gray);text-align:center;margin-top:6px';
+    const swapped=q.arr.slice();
+    [swapped[q.swap_idx[0]],swapped[q.swap_idx[1]]]=[swapped[q.swap_idx[1]],swapped[q.swap_idx[0]]];
+    hint.innerHTML=`After the swap, the array is: <code style="color:var(--yellow)">[${swapped.join(', ')}]</code>`;
+    parent.appendChild(hint);
+  }
+}
+function renderOptions(parent,q){
+  const grid=document.createElement('div'); grid.className='options-grid';
+  q.options.forEach((opt,i)=>{
+    const b=document.createElement('button'); b.className='opt-btn';
+    b.innerHTML=`<strong>${String.fromCharCode(65+i)})</strong> <code>${opt}</code>`;
+    b.addEventListener('click',()=>handleOption(i,q,grid));
+    grid.appendChild(b);
+  });
+  parent.appendChild(grid);
+}
+function renderFillBlank(parent,q){
+  const line=document.createElement('div'); line.className='blank-line';
+  if(q.pre){ const pre=document.createElement('span'); pre.innerHTML=q.pre; line.appendChild(pre); }
+  q.blanks.forEach((bl,i)=>{
+    const inp=document.createElement('input');
+    inp.type='text'; inp.className='blank-input'; inp.id=`blank-${i}`; inp.placeholder=bl.ph;
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') handleFillBlank(q); });
+    line.appendChild(inp);
+    if(i<q.blanks.length-1&&q.separator) line.appendChild(document.createTextNode(q.separator));
+  });
+  if(q.post){ const post=document.createElement('span'); post.textContent=q.post; line.appendChild(post); }
+  parent.appendChild(line);
+  const btn=document.createElement('button'); btn.className='btn btn-blue'; btn.style.marginTop='10px';
+  btn.textContent='✔ CHECK'; btn.addEventListener('click',()=>handleFillBlank(q));
+  parent.appendChild(btn);
+}
+
+// ================================================================
+// ANSWER HANDLERS
+// ================================================================
+function handleClickArray(idx,q){
+  if(G.awaitContinue) return;
+  const correct=idx===q.answer;
+  markDot(correct);
+  document.querySelectorAll('.arr-cell.clickable').forEach(c=>c.style.pointerEvents='none');
+  const cc=document.getElementById(`qcell-${q.answer}`);
+  if(cc) cc.classList.add('correct-cell');
+  if(!correct){ const wc=document.getElementById(`qcell-${idx}`); if(wc) wc.classList.add('wrong-cell'); }
+  processAnswer(correct,q);
+}
+function handleOption(idx,q,grid){
+  if(G.awaitContinue) return;
+  const correct=idx===q.answer;
+  markDot(correct);
+  grid.querySelectorAll('.opt-btn').forEach((b,i)=>{
+    b.disabled=true;
+    if(i===q.answer) b.classList.add('correct');
+    if(i===idx&&!correct) b.classList.add('wrong');
+  });
+  processAnswer(correct,q);
+}
+function handleFillBlank(q){
+  if(G.awaitContinue) return;
+  let allOk=true;
+  q.blanks.forEach((bl,i)=>{
+    const inp=document.getElementById(`blank-${i}`); if(!inp) return;
+    const val=inp.value.trim().replace(/\s/g,'');
+    const ok=bl.ans.some(a=>a.replace(/\s/g,'')===val);
+    inp.className='blank-input'+(ok?' correct':' wrong'); inp.disabled=true;
+    if(!ok) allOk=false;
+  });
+  markDot(allOk); processAnswer(allOk,q);
+}
+function processAnswer(correct,q){
+  snd(correct?'correct':'wrong');
+  if(correct){ G.score+=100+G.streak*10; G.streak++; }
+  else{ G.streak=0; G.levelErrors++; G.totalErrors++; }
+  updateHUD(); showFeedback(correct,q);
+}
+function markDot(correct){
+  const dots=document.querySelectorAll('.q-dot');
+  if(dots[G.qIdx]) dots[G.qIdx].className='q-dot '+(correct?'done':'wrong');
+}
+
+// ================================================================
+// FEEDBACK
+// ================================================================
+function showFeedback(correct,q){
+  const fb=document.getElementById('feedback');
+  fb.classList.remove('correct','wrong');
+  fb.classList.add('visible',correct?'correct':'wrong');
+  document.getElementById('fb-title').textContent=correct?'✔ CORRECT':'✘ INCORRECT — read the explanation';
+  document.getElementById('fb-body').innerHTML=correct?q.fb_ok:q.fb_err;
+  document.getElementById('btn-continue').style.display='block';
+  G.awaitContinue=true;
+}
+function hideFeedback(){
+  document.getElementById('feedback').classList.remove('visible','correct','wrong');
+  document.getElementById('btn-continue').style.display='none';
+  G.awaitContinue=false;
+}
+
+// ================================================================
+// CONTINUE
+// ================================================================
+function onContinue(){
+  if(G.awaitMeta){ endMeta(); return; }
+  if(!G.awaitContinue) return;
+  hideFeedback(); G.qIdx++;
+  const lv=LEVELS[G.levelIdx];
+  if(G.qIdx>=lv.questions.length){ showMeta(lv); return; }
+  renderQuestion(); updateHUD();
+}
+
+// ================================================================
+// METACOGNITIVE PAUSE
+// ================================================================
+function showMeta(lv){
+  if(G.levelErrors===0) G.score+=300;
+  G.score+=200; updateHUD();
+  document.getElementById('meta-question').innerHTML=
+    `<strong style="color:var(--purple)">${lv.meta}</strong>`;
+  document.getElementById('meta-ta').value='';
+  document.getElementById('meta-box').classList.add('visible');
+  document.getElementById('btn-continue').style.display='block';
+  document.getElementById('btn-continue').textContent='CONTINUE →';
+  G.awaitMeta=true; G.awaitContinue=false;
+}
+function hideMeta(){ document.getElementById('meta-box').classList.remove('visible'); G.awaitMeta=false; }
+function endMeta(){
+  hideMeta(); document.getElementById('btn-continue').style.display='none';
+  snd('level');
+  completed.add(G.levelIdx);
+  const next=G.levelIdx+1;
+  if(next<=7){
+    // Barrel game gates the next level
+    startBarrelGame(G.levelIdx);
+  } else {
+    unlocked.add(next); buildMap(); showScreen('screen-map');
+    document.getElementById('hud').classList.remove('visible');
+  }
+}
+
+// ================================================================
+// CODE LEVELS (6 & 7)
+// ================================================================
+function startCodeLevel(num){
+  G.hintIdx=0; G.runCnt=0;
+  document.getElementById('hints-left').textContent=3;
+  document.getElementById('run-cnt').textContent=0;
+  document.getElementById('code-banner').textContent=
+    num===6?'LAYER 6 — PATCH ASSEMBLY':'LAYER 7 — FINAL PATCH DEPLOY';
+  document.getElementById('code-banner').style.background=
+    num===6?'linear-gradient(90deg,#16a08544,#0f2522,#16a08544)'
+           :'linear-gradient(90deg,#8e44ad44,#1a0a2a,#8e44ad44)';
+
+  const inC=document.getElementById('code-in'), outC=document.getElementById('code-out');
+  inC.innerHTML=''; outC.innerHTML='';
+  CODE_TEST_ARR.forEach(v=>{ const d=document.createElement('div'); d.className='av'; d.textContent=v; inC.appendChild(d); });
+  CODE_EXPECTED.forEach(v=>{ const d=document.createElement('div'); d.className='av exp'; d.textContent=v; outC.appendChild(d); });
+
+  document.getElementById('out-box').className='out-box pixel-border';
+  document.getElementById('out-box').innerHTML='';
+  document.getElementById('out-box').style.display='none';
+  document.getElementById('hint-box').className='hint-box pixel-border';
+  document.getElementById('hint-box').innerHTML='';
+  document.getElementById('sol-box').className='sol-box pixel-border';
+  document.getElementById('code-continue-wrap').style.display='none';
+  document.getElementById('btn-hint').disabled=false;
+
+  if(num===6){
+    document.getElementById('code-intro').innerHTML=
+      `<strong style="color:#16a085">📝 FILL IN THE BLANKS</strong><br>
+       The Bubble Sort structure is already written. You just need to fill in <strong>5 key gaps</strong>.
+       Each gap corresponds to a concept from the previous levels.`;
+    buildBlanks();
+    document.getElementById('blanks-section').style.display='block';
+    document.getElementById('editor-section').style.display='none';
+  } else {
+    document.getElementById('code-intro').innerHTML=
+      `<strong style="color:#8e44ad">💻 WRITE FROM SCRATCH</strong><br>
+       Implement the complete <code>bubble_sort(arr)</code> function in Python.
+       The game will run your code against the test array and verify the result.`;
+    document.getElementById('code-ta').value=
+`def bubble_sort(arr):
+    n = len(arr)
+    # Write your implementation here
+
+
+
+
+    return arr`;
+    document.getElementById('code-ta').className='code-ta';
+    document.getElementById('blanks-section').style.display='none';
+    document.getElementById('editor-section').style.display='block';
+  }
+  showScreen('screen-code');
+}
+
+function buildBlanks(){
+  document.getElementById('blanks-display').innerHTML=
+`<span class="py-kw">def</span> <span class="py-fn">bubble_sort</span>(arr):<br>
+    n = <span class="py-fn">len</span>(arr)<br>
+    <span class="py-kw">for</span> i <span class="py-kw">in</span> <span class="py-fn">range</span>(<input id="b0" class="cb-input" placeholder="n-1"/>):  <span class="py-cm"># ← outer loop, level 4</span><br>
+        <span class="py-kw">for</span> j <span class="py-kw">in</span> <span class="py-fn">range</span>(n - <input id="b1" class="cb-input" placeholder="?" style="width:60px"/> - <span class="py-num">1</span>):  <span class="py-cm"># ← inner loop, level 5</span><br>
+            <span class="py-kw">if</span> arr[j] <input id="b2" class="cb-input" placeholder="op" style="width:50px"/> arr[j + <span class="py-num">1</span>]:  <span class="py-cm"># ← condition, level 2</span><br>
+                arr[j], arr[j+<span class="py-num">1</span>] = <input id="b3" class="cb-input" placeholder="arr[?]"/>, <input id="b4" class="cb-input" placeholder="arr[?]"/>  <span class="py-cm"># ← swap, level 2</span><br>
+    <span class="py-kw">return</span> arr`;
+}
+
+function runCode(){
+  G.runCnt++; document.getElementById('run-cnt').textContent=G.runCnt;
+  const isLv7=G.levelIdx===7;
+  let userCode;
+  if(isLv7){
+    userCode=document.getElementById('code-ta').value.trim();
+  } else {
+    let allFilled=true;
+    BLANKS_LEVEL6.forEach(bl=>{
+      const inp=document.getElementById(bl.id); if(!inp) return;
+      const val=inp.value.trim().replace(/\s/g,'');
+      const ok=bl.ans.some(a=>a.replace(/\s/g,'')===val);
+      inp.className='cb-input'+(ok?' ok':' err'); if(!ok) allFilled=false;
+    });
+    if(!allFilled){
+      const ob=document.getElementById('out-box');
+      ob.style.display='block'; ob.className='out-box pixel-border pyerr';
+      ob.innerHTML=`<div class="out-title">⚠ Some blanks are incorrect</div>
+        <div>Review the gaps marked in red. Use hints if you need help.</div>`;
+      if(G.runCnt>=3){ document.getElementById('sol-box').className='sol-box pixel-border visible'; document.getElementById('code-continue-wrap').style.display='block'; }
+      return;
+    }
+    userCode=`def bubble_sort(arr):\n    n = len(arr)\n    for i in range(${document.getElementById('b0').value.trim()}):\n        for j in range(n - ${document.getElementById('b1').value.trim()} - 1):\n            if arr[j] ${document.getElementById('b2').value.trim()} arr[j + 1]:\n                arr[j], arr[j+1] = ${document.getElementById('b3').value.trim()}, ${document.getElementById('b4').value.trim()}\n    return arr`;
+  }
+
+  const fullCode=userCode+`\nresult = bubble_sort([${CODE_TEST_ARR.join(',')}])\nprint(result)`;
+  let captured='';
+  const ob=document.getElementById('out-box');
+  ob.style.display='block'; ob.className='out-box pixel-border';
+  ob.innerHTML='<div style="color:var(--gray);font-size:.8rem">⏳ Running your Python code…</div>';
+
+  if(typeof Sk==='undefined'){ runJSFallback(userCode,ob); return; }
+
+  Sk.configure({
+    output:(t)=>{ captured+=t; },
+    read:(x)=>{
+      if(Sk.builtinFiles?.files?.[x]===undefined) throw new Error('File not found: '+x);
+      return Sk.builtinFiles.files[x];
+    },
+    execLimit:5000
+  });
+  Sk.misceval.asyncToPromise(()=>
+    Sk.importMainWithBody('<stdin>',false,fullCode,true)
+  ).then(()=>{
+    verifyOutput(captured.trim(),ob);
+  }).catch(err=>{ showPyError(err.toString(),ob); });
+}
+
+function verifyOutput(raw,ob){
+  let result=null;
+  try{
+    const m=raw.replace(/\s/g,'').match(/^\[(.+)\]$/);
+    if(m) result=m[1].split(',').map(Number);
+  }catch(e){}
+  const ok=result&&JSON.stringify(result)===JSON.stringify(CODE_EXPECTED);
+  if(ok){
+    G.score+=Math.max(50,300-G.runCnt*50); updateHUD();
+    const ta=document.getElementById('code-ta'); if(ta) ta.className='code-ta ok';
+    ob.className='out-box pixel-border ok';
+    ob.innerHTML=`<div class="out-title">✔ Correct! Your code works.</div>
+      <div>Input:    <code style="color:var(--yellow)">[${CODE_TEST_ARR.join(', ')}]</code></div>
+      <div>Your output: <code style="color:var(--green)">${raw}</code></div>
+      <div>Expected: <code style="color:var(--green)">[${CODE_EXPECTED.join(', ')}]</code></div>
+      <br><div style="color:var(--green)">+${Math.max(50,300-G.runCnt*50)} points in ${G.runCnt} attempt(s).</div>`;
+    document.getElementById('code-continue-wrap').style.display='block';
+  } else {
+    const ta=document.getElementById('code-ta'); if(ta) ta.className='code-ta err';
+    ob.className='out-box pixel-border err';
+    let hint='';
+    if(!result) hint='Did you forget <code>return arr</code>?';
+    else if(result.length!==CODE_EXPECTED.length) hint='The resulting array has a different size. Are you modifying arr correctly?';
+    else{ const fi=result.findIndex((v,i)=>v!==CODE_EXPECTED[i]); hint=`First error at index <strong>${fi}</strong>: you got <code>${result[fi]}</code>, expected <code>${CODE_EXPECTED[fi]}</code>. Check your condition or swap.`; }
+    ob.innerHTML=`<div class="out-title">✘ Incorrect result (attempt ${G.runCnt})</div>
+      <div>Your output: <code style="color:var(--red)">${raw||'(empty)'}</code></div>
+      <div>Expected:    <code style="color:var(--green)">[${CODE_EXPECTED.join(', ')}]</code></div>
+      <br><div style="color:var(--orange)">💡 ${hint}</div>`;
+    if(G.runCnt>=3){ document.getElementById('sol-box').className='sol-box pixel-border visible'; document.getElementById('code-continue-wrap').style.display='block'; }
+  }
+}
+
+function showPyError(msg,ob){
+  const ta=document.getElementById('code-ta'); if(ta) ta.className='code-ta err';
+  ob.className='out-box pixel-border pyerr';
+  let friendly=msg;
+  if(msg.includes('SyntaxError'))     friendly='⚠ SyntaxError: check indentation (4 spaces per level) and colons at the end of for/if lines.';
+  else if(msg.includes('NameError'))  friendly='⚠ NameError: you used a variable that does not exist. Are arr, n, i, j spelled correctly?';
+  else if(msg.includes('IndexError')) friendly='⚠ IndexError: index out of range. Check the limits of your range() calls.';
+  else if(msg.includes('IndentationError')) friendly='⚠ IndentationError: use exactly 4 spaces per indentation level.';
+  else if(msg.includes('execLimit'))  friendly='⚠ Time limit exceeded — possible infinite loop. Check your loop conditions.';
+  ob.innerHTML=`<div class="out-title">⚠ Python Error (attempt ${G.runCnt})</div>
+    <div>${friendly}</div>
+    <div class="code-snippet" style="white-space:pre-wrap">${msg.substring(0,200)}</div>`;
+  if(G.runCnt>=3){ document.getElementById('sol-box').className='sol-box pixel-border visible'; document.getElementById('code-continue-wrap').style.display='block'; }
+}
+
+function runJSFallback(code,ob){
+  const has1=/for\s+i\s+in\s+range/.test(code);
+  const has2=/for\s+j\s+in\s+range/.test(code);
+  const hasCond=/arr\[j\]\s*>\s*arr\[j\s*\+\s*1\]/.test(code);
+  const hasSwap=/arr\[j\],\s*arr\[j\s*\+\s*1\]\s*=\s*arr\[j\s*\+\s*1\],\s*arr\[j\]/.test(code);
+  if(has1&&has2&&hasCond&&hasSwap){
+    const arr=[...CODE_TEST_ARR],n=arr.length;
+    for(let i=0;i<n-1;i++) for(let j=0;j<n-i-1;j++) if(arr[j]>arr[j+1])[arr[j],arr[j+1]]=[arr[j+1],arr[j]];
+    verifyOutput(JSON.stringify(arr).replace(/,/g,', '),ob);
+  } else {
+    ob.className='out-box pixel-border pyerr';
+    const miss=[];
+    if(!has1) miss.push('outer loop <code>for i in range(n-1)</code>');
+    if(!has2) miss.push('inner loop <code>for j in range(n-i-1)</code>');
+    if(!hasCond) miss.push('condition <code>if arr[j] > arr[j+1]</code>');
+    if(!hasSwap) miss.push('swap <code>arr[j], arr[j+1] = arr[j+1], arr[j]</code>');
+    ob.innerHTML=`<div class="out-title">⚠ Missing key elements:</div>
+      <ul style="padding-left:16px;margin-top:8px">${miss.map(m=>`<li style="margin-bottom:5px">${m}</li>`).join('')}</ul>`;
+    if(G.runCnt>=3){ document.getElementById('sol-box').className='sol-box pixel-border visible'; document.getElementById('code-continue-wrap').style.display='block'; }
+  }
+}
+
+function showHint(){
+  const hints=G.levelIdx===6?HINTS_6:HINTS_7;
+  if(G.hintIdx>=hints.length){ document.getElementById('btn-hint').disabled=true; return; }
+  const hb=document.getElementById('hint-box');
+  hb.innerHTML=`<strong style="color:var(--purple)">💡 HINT ${G.hintIdx+1}:</strong><br>${hints[G.hintIdx]}`;
+  hb.className='hint-box pixel-border visible';
+  G.hintIdx++;
+  document.getElementById('hints-left').textContent=hints.length-G.hintIdx;
+  if(G.hintIdx>=hints.length) document.getElementById('btn-hint').disabled=true;
+}
+
+function finishLevel(){
+  completed.add(G.levelIdx);
+  if(G.levelIdx===7){
+    showEndScreen();
+  } else {
+    // Barrel game gates the next layer
+    document.getElementById('hud').classList.remove('visible');
+    startBarrelGame(G.levelIdx);
+  }
+}
+
+function showEndScreen(){
+  snd('win');
+  document.getElementById('hud').classList.remove('visible');
+  document.getElementById('final-score').textContent=String(G.score).padStart(5,'0');
+  document.getElementById('end-name-display').textContent=PLAYER.name+' — ';
+  let rank,bg;
+  if(G.totalErrors===0)      {rank='S — BUBBLE MASTER 🏆';    bg='#f8e71c';}
+  else if(G.totalErrors<=5)  {rank='A — SORT EXPERT ⭐';      bg='#2ecc71';}
+  else if(G.totalErrors<=12) {rank='B — ALGO LEARNER 📚';     bg='#3498db';}
+  else                        {rank='C — KEEP GOING 💪';       bg='#e67e22';}
+  const el=document.getElementById('rank-disp');
+  el.textContent=rank; el.style.background=bg;
+  el.style.color=bg==='#f8e71c'?'#000':'#fff'; el.style.boxShadow='4px 4px 0 #000';
+  showScreen('screen-end');
+}
+
+// ================================================================
+// BARREL MINI-GAME ENGINE — DONKEY KONG STYLE
+// ================================================================
+
+// ── Static level geometry ────────────────────────────────────────
+const DK_PLAT = [
+  { x1:0, x2:860, y:296 },
+  { x1:0, x2:860, y:196 },
+  { x1:0, x2:860, y:96  }
+];
+const DK_LAD = [
+  { x:680, yB:296, yT:196, pFrom:0, pTo:1 },
+  { x:180, yB:196, yT:96,  pFrom:1, pTo:2 }
+];
+const DK_PATH = [
+  {x:790, y:96 },
+  {x:195, y:96 },
+  {x:195, y:196},
+  {x:665, y:196},
+  {x:665, y:296},
+  {x:-40, y:296}
+];
+
+let BG = {
+  active:false, animId:null, fromLevel:0,
+  lives:3, barrels:[], spawnTimer:0, spawnInterval:180, barrelSpeed:2,
+  maxBarrels:3,
+  player:{
+    x:60, y:296, vx:0, vy:0,
+    platIdx:0, state:'walking',
+    climbLad:null, facingRight:true,
+    animFrame:0, animTimer:0, hitFlash:0, w:24, h:52
+  },
+  keys:{ left:false, right:false, up:false, down:false },
+  gameOver:false, won:false, ctx:null, W:860, H:320
+};
+
+function barrelParams(lv){
+  return {
+    speed:    1.8 + lv * 0.22,
+    interval: Math.max(130, 210 - lv * 12),
+    max:      2 + Math.floor(lv / 2)
+  };
+}
+
+function startBarrelGame(fromLevel){
+  const p = barrelParams(fromLevel);
+  BG.fromLevel=fromLevel; BG.lives=3; BG.barrels=[];
+  BG.barrelSpeed=p.speed; BG.spawnInterval=p.interval; BG.maxBarrels=p.max;
+  BG.spawnTimer=90; BG.gameOver=false; BG.won=false;
+  const pl=BG.player;
+  pl.x=60; pl.y=DK_PLAT[0].y; pl.vx=0; pl.vy=0;
+  pl.platIdx=0; pl.state='walking'; pl.climbLad=null;
+  pl.facingRight=true; pl.animFrame=0; pl.animTimer=0; pl.hitFlash=0;
+  BG.keys={left:false,right:false,up:false,down:false};
+  document.getElementById('hud').classList.remove('visible');
+  showScreen('screen-barrel');
+  const canvas=document.getElementById('barrel-canvas');
+  canvas.width=860; canvas.height=320;
+  BG.ctx=canvas.getContext('2d'); BG.W=860; BG.H=320;
+  document.getElementById('barrel-sub').textContent=
+    `Climb to the top → defeat The Bug → unlock System Layer ${fromLevel+1}!`;
+  document.getElementById('barrel-overlay').style.display='none';
+  document.getElementById('barrel-msg').textContent='↑ CLIMB TO THE TOP!';
+  document.getElementById('barrel-count').textContent='FLOOR: 0 / 2';
+  updateBGLives();
+  if(BG.animId) cancelAnimationFrame(BG.animId);
+  BG.active=true; bLoop();
+}
+
+function bLoop(){ if(!BG.active) return; bUpdate(); bDraw(); BG.animId=requestAnimationFrame(bLoop); }
+
+function spawnBarrel(){ BG.barrels.push({seg:0,x:DK_PATH[0].x,y:DK_PATH[0].y,rot:0}); }
+
+function stepBarrel(b){
+  if(b.seg>=DK_PATH.length-1) return true;
+  const tgt=DK_PATH[b.seg+1];
+  const dx=tgt.x-b.x, dy=tgt.y-b.y, dist=Math.hypot(dx,dy);
+  const spd=BG.barrelSpeed*(dy!==0?3.2:1);
+  if(dist<=spd+0.5){ b.x=tgt.x; b.y=tgt.y; b.seg++; }
+  else { b.x+=(dx/dist)*spd; b.y+=(dy/dist)*spd; }
+  b.rot+=0.07; return false;
+}
+
+function bUpdate(){
+  if(BG.gameOver||BG.won) return;
+  const k=BG.keys, pl=BG.player, GRAVITY=0.72;
+  if(BG.spawnTimer--<=0 && BG.barrels.length<BG.maxBarrels){ spawnBarrel(); BG.spawnTimer=BG.spawnInterval; }
+  BG.barrels=BG.barrels.filter(b=>!stepBarrel(b));
+  if(++pl.animTimer>=7){ pl.animTimer=0; pl.animFrame=(pl.animFrame+1)%4; }
+  if(pl.hitFlash>0) pl.hitFlash--;
+  if(pl.state==='climbing'){
+    const lad=pl.climbLad;
+    if(k.up){ pl.y-=2.5; if(pl.animFrame===0) snd('climb'); }
+    if(k.down){ pl.y+=2.5; if(pl.animFrame===0) snd('climb'); }
+    pl.x=lad.x-pl.w/2;
+    if(pl.y<=lad.yT){ pl.y=lad.yT; pl.platIdx=lad.pTo; pl.state='walking'; pl.climbLad=null; }
+    if(pl.y>=lad.yB){ pl.y=lad.yB; pl.platIdx=lad.pFrom; pl.state='walking'; pl.climbLad=null; }
+  } else if(pl.state==='jumping'){
+    pl.vy+=GRAVITY; pl.y+=pl.vy;
+    if(k.left){ pl.x-=3.2; pl.facingRight=false; }
+    if(k.right){ pl.x+=3.2; pl.facingRight=true; }
+    const plat=DK_PLAT[pl.platIdx];
+    if(pl.y>=plat.y){ pl.y=plat.y; pl.vy=0; pl.state='walking'; }
+  } else {
+    if(k.left){ pl.x-=3.2; pl.facingRight=false; }
+    if(k.right){ pl.x+=3.2; pl.facingRight=true; }
+    pl.x=Math.max(0,Math.min(BG.W-pl.w,pl.x));
+    const pCX=pl.x+pl.w/2;
+    if(k.up){
+      const lad=DK_LAD.find(l=>l.pFrom===pl.platIdx&&Math.abs(pCX-l.x)<28);
+      if(lad){ pl.state='climbing'; pl.climbLad=lad; pl.x=lad.x-pl.w/2; }
+    }
+    if(k.down){
+      const lad=DK_LAD.find(l=>l.pTo===pl.platIdx&&Math.abs(pCX-l.x)<28);
+      if(lad){ pl.state='climbing'; pl.climbLad=lad; pl.x=lad.x-pl.w/2; pl.y=lad.yT+4; }
+    }
+  }
+  document.getElementById('barrel-count').textContent=`FLOOR: ${pl.platIdx} / 2`;
+  if(pl.platIdx===2&&pl.state!=='climbing'){
+    BG.won=true; BG.active=false; cancelAnimationFrame(BG.animId);
+    setTimeout(barrelWin,700); return;
+  }
+  if(pl.hitFlash===0){
+    const pCX=pl.x+pl.w/2, pBot=pl.y;
+    for(const b of BG.barrels){
+      const bFloor=b.seg<=1?2:b.seg<=3?1:0;
+      if(bFloor!==pl.platIdx) continue;
+      if(Math.hypot(b.x-pCX,b.y-pBot+22)<34){
+        pl.hitFlash=60; BG.lives--; snd('hit'); updateBGLives();
+        if(BG.lives<=0){ BG.gameOver=true; BG.active=false; cancelAnimationFrame(BG.animId); setTimeout(barrelGameOver,900); return; }
+        break;
+      }
+    }
+  }
+}
+
+function bDraw(){
+  const ctx=BG.ctx,W=BG.W,H=BG.H;
+  ctx.fillStyle='#030312'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#05052a'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=48){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  DK_PLAT.forEach((plat,i)=>{
+    const gy=plat.y+2,gH=14;
+    ctx.fillStyle='#2a1000'; ctx.fillRect(0,gy,W,gH);
+    ctx.fillStyle='#8B4513'; ctx.fillRect(0,gy,W,5);
+    ctx.fillStyle='#5c2e0a'; ctx.fillRect(0,gy+5,W,5);
+    ctx.fillStyle='#3a1800'; ctx.fillRect(0,gy+10,W,4);
+    ctx.fillStyle='#f8e71c';
+    for(let rx=25;rx<W-10;rx+=90){ctx.beginPath();ctx.arc(rx,gy+7,3.5,0,Math.PI*2);ctx.fill();}
+    ctx.font='bold 8px "Courier New"'; ctx.textAlign='left';
+    ctx.fillText(`LAYER ${i}`,6,gy+11);
+  });
+  DK_LAD.forEach(lad=>{
+    ctx.strokeStyle='#e0c000'; ctx.lineWidth=4;
+    [lad.x-9,lad.x+9].forEach(lx=>{ctx.beginPath();ctx.moveTo(lx,lad.yT-2);ctx.lineTo(lx,lad.yB+2);ctx.stroke();});
+    ctx.strokeStyle='#f8e71c'; ctx.lineWidth=2.5;
+    for(let ry=lad.yT;ry<=lad.yB;ry+=18){ctx.beginPath();ctx.moveTo(lad.x-9,ry);ctx.lineTo(lad.x+9,ry);ctx.stroke();}
+    ctx.strokeStyle='rgba(255,240,80,0.15)'; ctx.lineWidth=10;
+    ctx.beginPath();ctx.moveTo(lad.x,lad.yT);ctx.lineTo(lad.x,lad.yB);ctx.stroke();
+  });
+  const bR=20;
+  BG.barrels.forEach(b=>{
+    ctx.save(); ctx.translate(b.x,b.y-bR);
+    ctx.fillStyle='rgba(0,0,0,0.4)';
+    ctx.beginPath();ctx.ellipse(0,bR+3,bR-3,5,0,0,Math.PI*2);ctx.fill();
+    ctx.rotate(b.rot);
+    ctx.fillStyle='#7B3F00'; ctx.beginPath();ctx.arc(0,0,bR,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#4a2000'; ctx.lineWidth=3.5; ctx.beginPath();ctx.arc(0,0,bR,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='#9B5200'; ctx.lineWidth=2;
+    [-bR*.45,bR*.45].forEach(ox=>{ctx.beginPath();ctx.moveTo(ox,-bR+4);ctx.lineTo(ox,bR-4);ctx.stroke();});
+    ctx.rotate(-b.rot); ctx.font='13px serif'; ctx.textAlign='center'; ctx.fillText('🐛',0,4);
+    ctx.restore();
+  });
+  ctx.font='40px serif'; ctx.textAlign='center';
+  ctx.fillText('🦍',W-54,DK_PLAT[2].y-6);
+  ctx.fillStyle='#e74c3c'; ctx.font='bold 9px "Courier New"'; ctx.textAlign='center';
+  ctx.fillText('THE BUG',W-54,DK_PLAT[2].y+10);
+  ctx.font='26px serif'; ctx.fillText('🚩',55,DK_PLAT[2].y-4);
+  ctx.fillStyle='#2ecc71'; ctx.font='bold 8px "Courier New"'; ctx.fillText('GOAL',55,DK_PLAT[2].y+10);
+  const pl=BG.player;
+  const flash=pl.hitFlash>0&&Math.floor(pl.hitFlash/5)%2===0;
+  if(!flash){
+    const px=pl.x,pF=pl.y,fr=pl.facingRight;
+    const walk=pl.state==='walking'?(pl.animFrame%2===0?3:-3):0;
+    const cOff=pl.state==='climbing'?(pl.animFrame%2===0?3:-3):0;
+    ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath();ctx.ellipse(px+12,pF+3,13,4,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a2535';
+    ctx.fillRect(px+2,pF-16+walk,10,16); ctx.fillRect(px+12,pF-16-walk,10,16);
+    ctx.fillStyle=PLAYER.bodyColor; ctx.fillRect(px,pF-38,24,24);
+    ctx.fillStyle=PLAYER.armColor;
+    if(pl.state==='climbing'){
+      ctx.fillRect(px-6,pF-46+cOff,7,14); ctx.fillRect(px+23,pF-46-cOff,7,14);
+    } else {
+      const aOff=fr?0:4;
+      ctx.fillRect(px-6,pF-36+aOff,7,14); ctx.fillRect(px+23,pF-36+(4-aOff),7,14);
+    }
+    ctx.fillStyle='#f0c080'; ctx.fillRect(px+2,pF-53,20,16);
+    // Hair for female character
+    if(PLAYER.hairColor){
+      ctx.fillStyle=PLAYER.hairColor; ctx.fillRect(px+2,pF-62,20,10);
+    }
+    ctx.fillStyle='#f8e71c'; ctx.fillRect(px-1,pF-60,26,9);
+    ctx.fillStyle='#000'; ctx.font='bold 7px "Courier New"'; ctx.textAlign='center';
+    ctx.fillText('[ ]',px+12,pF-53);
+    ctx.fillStyle='#1a2535'; ctx.fillRect(px+(fr?14:6),pF-50,4,4);
+  }
+  if(pl.hitFlash>38){ctx.fillStyle='rgba(231,76,60,0.15)';ctx.fillRect(0,0,W,H);}
+  if(BG.won){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(W/2-145,H/2-28,290,56);
+    ctx.fillStyle='#2ecc71';ctx.font='bold 18px "Courier New"';ctx.textAlign='center';
+    ctx.fillText('✔  LAYER CLEARED!',W/2,H/2+7);
+  }
+  if(BG.gameOver){
+    ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(W/2-135,H/2-28,270,56);
+    ctx.fillStyle='#e74c3c';ctx.font='bold 18px "Courier New"';ctx.textAlign='center';
+    ctx.fillText('💥  SYSTEM HIT!',W/2,H/2+7);
+  }
+}
+
+function jumpPlayer(){
+  if(!BG.active||BG.gameOver||BG.won) return;
+  if(BG.player.state==='walking'){ BG.player.vy=-13; BG.player.state='jumping'; snd('jump'); }
+}
+
+function updateBGLives(){
+  const v=BG.lives;
+  document.getElementById('barrel-lives').textContent='❤️'.repeat(Math.max(0,v))+'🖤'.repeat(Math.max(0,3-v));
+}
+
+function barrelWin(){
+  snd('level');
+  bDraw();
+  document.getElementById('barrel-msg').textContent='⚡ ACCESS GRANTED — LAYER UNLOCKED';
+  const next=BG.fromLevel+1; G.score+=200; updateHUD();
+  unlocked.add(next); buildMap();
+  setTimeout(()=>{ showScreen('screen-map'); },1400);
+}
+
+function barrelGameOver(){
+  bDraw();
+  document.getElementById('barrel-msg').textContent='💥 HIT BY CORRUPTED DATA!';
+  const ov=document.getElementById('barrel-overlay');
+  ov.style.display='block'; ov.style.borderColor='var(--red)';
+  document.getElementById('barrel-overlay-title').textContent='💥 SYSTEM HIT!';
+  document.getElementById('barrel-overlay-title').style.color='var(--red)';
+  document.getElementById('barrel-overlay-msg').textContent=
+    "The Bug's barrels got you! Retry to try again, or skip to advance (−200 points).";
+}
+
+function retryBarrelGame(){ startBarrelGame(BG.fromLevel); }
+
+function skipBarrelGame(){
+  BG.active=false; if(BG.animId) cancelAnimationFrame(BG.animId);
+  const next=BG.fromLevel+1;
+  G.score=Math.max(0,G.score-200); updateHUD();
+  unlocked.add(next); buildMap(); showScreen('screen-map');
+}
+
+// Canvas click/tap → jump
+document.getElementById('barrel-canvas').addEventListener('click', jumpPlayer);
+document.getElementById('barrel-canvas').addEventListener('touchstart', e=>{ e.preventDefault(); jumpPlayer(); }, {passive:false});
+
+
+// ================================================================
+// KEYBOARD — quiz screens + DK barrel game
+document.addEventListener('keydown',e=>{
+  const act=document.querySelector('.screen.active'); if(!act) return;
+  // Quiz screens: ENTER / SPACE to continue
+  if(act.id==='screen-game'&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); onContinue(); }
+  // Barrel game: held-key movement + one-shot jump
+  if(act.id==='screen-barrel'){
+    e.preventDefault();
+    if(e.key==='ArrowLeft' ||e.key==='a'||e.key==='A') BG.keys.left =true;
+    if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') BG.keys.right=true;
+    if(e.key==='ArrowUp'   ||e.key==='w'||e.key==='W'){
+      BG.keys.up=true;
+      // Also jump if not near a ladder
+      const pCX=BG.player.x+BG.player.w/2;
+      const nearLad=DK_LAD.find(l=>l.pFrom===BG.player.platIdx&&Math.abs(pCX-l.x)<28);
+      if(!nearLad) jumpPlayer();
+    }
+    if(e.key==='ArrowDown' ||e.key==='s'||e.key==='S') BG.keys.down=true;
+    if(e.key===' ') jumpPlayer();
+  }
+});
+document.addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft' ||e.key==='a'||e.key==='A') BG.keys.left =false;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') BG.keys.right=false;
+  if(e.key==='ArrowUp'   ||e.key==='w'||e.key==='W') BG.keys.up   =false;
+  if(e.key==='ArrowDown' ||e.key==='s'||e.key==='S') BG.keys.down =false;
+});
+
+// SYNTAX HIGHLIGHT
+function syntaxHL(code){
+  return code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\b(def|for|in|range|if|return|pass)\b/g,'<span class="py-kw">$1</span>')
+    .replace(/\b(len|print)\b/g,'<span class="py-fn">$1</span>')
+    .replace(/\b(\d+)\b/g,'<span class="py-num">$1</span>')
+    .replace(/#.*/g,'<span class="py-cm">$&</span>');
+}
+
+// ================================================================
+// SOUND SYSTEM — Web Audio API (no external files needed)
+// ================================================================
+let _AC=null, SOUND_ON=true;
+function ac(){
+  if(!_AC) _AC=new(window.AudioContext||window.webkitAudioContext)();
+  if(_AC.state==='suspended') _AC.resume();
+  return _AC;
+}
+function _tone(freq,type,dur,vol,delay){
+  try{
+    const ctx=ac(), t=ctx.currentTime+(delay||0);
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type=type; o.frequency.setValueAtTime(freq,t);
+    g.gain.setValueAtTime(vol,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.start(t); o.stop(t+dur+0.01);
+  }catch(e){}
+}
+function snd(name){
+  if(!SOUND_ON) return;
+  switch(name){
+    case 'correct':
+      [[523,0],[659,.08],[784,.16]].forEach(([f,d])=>_tone(f,'square',.1,.2,d)); break;
+    case 'wrong':
+      _tone(300,'sawtooth',.14,.28,0); _tone(180,'sawtooth',.2,.22,.1); break;
+    case 'jump':
+      _tone(350,'square',.04,.18,0); _tone(600,'square',.06,.15,.05); break;
+    case 'hit':
+      _tone(200,'sawtooth',.18,.32,0); _tone(80,'sawtooth',.2,.28,.1); break;
+    case 'climb':
+      _tone(880,'square',.03,.07,0); break;
+    case 'level':
+      [[523,0],[659,.1],[784,.2],[1047,.3]].forEach(([f,d])=>_tone(f,'square',.13,.25,d)); break;
+    case 'win':
+      [[523,0],[659,.1],[784,.2],[659,.3],[784,.4],[1047,.5],[1047,.65],[1319,.75]]
+        .forEach(([f,d])=>_tone(f,'square',.12,.24,d)); break;
+  }
+}
+function toggleSound(){
+  SOUND_ON=!SOUND_ON;
+  document.getElementById('snd-btn').textContent=SOUND_ON?'🔊':'🔇';
+}
+
+// INIT — show story intro first
+buildMap();
+showScreen('screen-story');
+</script>
+</body>
+</html>
