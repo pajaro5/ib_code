@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOP GUN DATA ACADEMY — A3 Databases</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Nunito:wght@400;600;700&display=swap');
+
+:root {
+  --bg:      #080c14;
+  --bg2:     #0d1424;
+  --bg3:     #121d30;
+  --amber:   #ffa726;
+  --amber2:  #ffcc02;
+  --red:     #ff1744;
+  --red2:    #ff6b6b;
+  --green:   #00e676;
+  --green2:  #69f0ae;
+  --blue:    #40c4ff;
+  --text:    #d4e4f8;
+  --muted:   #7a9ab8;
+  --border:  rgba(255,167,38,0.25);
+  --shadow:  0 4px 32px rgba(0,0,0,0.6);
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Scanline overlay ── */
+body::after {
+  content:''; position:fixed; inset:0; z-index:999; pointer-events:none;
+  background: repeating-linear-gradient(0deg,
+    transparent, transparent 2px,
+    rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+}
+
+/* ── Blueprint background ── */
+#bp-layer {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden;
+}
+.bp-grid {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(64,196,255,0.10) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.bp-grid::before {
+  content:''; position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(64,196,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(64,196,255,0.04) 1px, transparent 1px);
+  background-size: 160px 160px;
+}
+.bp-plane { position: absolute; color: rgba(64,196,255,0.10); }
+.bp-label {
+  position: absolute; font-family:'Share Tech Mono',monospace;
+  font-size: 0.6rem; color: rgba(64,196,255,0.14); letter-spacing: 2px;
+  text-transform: uppercase; white-space: nowrap;
+}
+@keyframes bp-float {
+  0%,100% { transform: translateY(0px) rotate(var(--r,0deg)); }
+  50%      { transform: translateY(-10px) rotate(var(--r,0deg)); }
+}
+@keyframes bp-drift {
+  0%   { transform: translateX(-120%) rotate(var(--r,-8deg)); }
+  100% { transform: translateX(120vw)  rotate(var(--r,-8deg)); }
+}
+.bp-float { animation: bp-float var(--dur,12s) ease-in-out infinite; animation-delay: var(--del,0s); }
+.bp-drift { animation: bp-drift var(--dur,60s) linear infinite; animation-delay: var(--del,0s); }
+.bp-author {
+  position: absolute; bottom: 80px; right: 28px;
+  font-family:'Share Tech Mono',monospace; font-size: 0.62rem;
+  color: rgba(64,196,255,0.18); letter-spacing:2px; text-align:right;
+  line-height: 1.7;
+}
+
+/* ── HUD header ── */
+#hud {
+  position: fixed; top:0; left:0; right:0; z-index:100;
+  background: rgba(8,12,20,0.97);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 28px;
+  display: flex; align-items:center; justify-content:space-between;
+  backdrop-filter: blur(8px);
+}
+.hud-left { display:flex; align-items:center; gap:14px; }
+.hud-logo { font-family:'Rajdhani',sans-serif; font-weight:700; font-size:1.1rem; color:var(--amber); letter-spacing:3px; }
+.hud-sep  { width:1px; height:24px; background:var(--border); }
+.phase-dots { display:flex; gap:6px; align-items:center; }
+.dot {
+  width:8px; height:8px; border-radius:50%;
+  background: var(--bg3); border:1.5px solid var(--muted);
+  transition: all 0.3s;
+}
+.dot.active  { background:var(--amber); border-color:var(--amber); box-shadow:0 0 8px var(--amber); }
+.dot.done    { background:var(--green); border-color:var(--green); }
+.hud-right   { font-family:'Share Tech Mono',monospace; font-size:0.8rem; color:var(--muted); }
+#phase-label { color:var(--amber2); font-weight:600; }
+
+/* ── Main ── */
+#main {
+  padding: 88px 0 100px;
+  min-height: 100vh;
+}
+
+/* ── Phase ── */
+.phase { display:none; animation: fadein 0.5s ease; }
+.phase.active { display:block; }
+@keyframes fadein { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Phase hero ── */
+.phase-hero {
+  padding: 48px 60px 36px;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+.phase-tag {
+  font-family:'Rajdhani',sans-serif; font-size:0.8rem; letter-spacing:4px;
+  color:var(--muted); font-weight:600; margin-bottom:8px;
+}
+.phase-tag .principle {
+  display:inline-block; margin-left:12px;
+  background: rgba(64,196,255,0.1);
+  border:1px solid rgba(64,196,255,0.3);
+  color:var(--blue); padding:2px 10px; border-radius:20px;
+  font-size:0.75rem; letter-spacing:1px;
+}
+.phase-title {
+  font-family:'Rajdhani',sans-serif;
+  font-size: clamp(2rem,5vw,3.4rem);
+  font-weight:700; line-height:1.1;
+  color:var(--amber);
+  text-shadow: 0 0 40px rgba(255,167,38,0.3);
+  margin-bottom:14px;
+}
+.phase-story {
+  font-size:1.05rem; line-height:1.7;
+  color:var(--text); max-width:800px;
+}
+.phase-story strong { color:var(--amber2); }
+.phase-story em { color:var(--blue); font-style:normal; }
+
+/* ── Terminal box ── */
+.terminal {
+  font-family:'Share Tech Mono',monospace;
+  background:#030f03; color:#00e676;
+  border:1px solid #00e676;
+  border-radius:8px; padding:20px 24px;
+  font-size:0.88rem; line-height:1.7;
+  position:relative; margin:20px 0;
+  overflow-x:auto;
+}
+.terminal::before {
+  content:'// CLASSIFIED — TOPGUN COMMAND DATABASE RECORD //';
+  display:block; color:#006622; margin-bottom:12px;
+  border-bottom:1px solid #004410; padding-bottom:8px;
+}
+.terminal .warn { color:#ff6b6b; }
+.terminal .ok   { color:#69f0ae; }
+.terminal .dim  { color:#005510; }
+
+/* ── Body content area ── */
+.phase-body {
+  padding: 36px 60px 40px;
+  max-width: 1000px;
+}
+
+/* ── Section label ── */
+.section-label {
+  font-family:'Rajdhani',sans-serif; font-size:0.78rem;
+  letter-spacing:3px; color:var(--muted); font-weight:600;
+  text-transform:uppercase; margin-bottom:10px;
+}
+
+/* ── Text input ── */
+.q-block { margin-bottom:28px; }
+.q-text {
+  font-size:1.1rem; font-weight:700; color:var(--text);
+  margin-bottom:12px; line-height:1.5;
+}
+.q-text .q-icon { margin-right:8px; }
+.wingman-note {
+  display:inline-block; background:rgba(64,196,255,0.08);
+  border:1px solid rgba(64,196,255,0.25); border-radius:8px;
+  padding:6px 14px; font-size:0.85rem; color:var(--blue);
+  margin-bottom:12px;
+}
+textarea, input[type=text] {
+  width:100%; background:var(--bg2);
+  border:1.5px solid var(--border); border-radius:10px;
+  color:var(--text); font-family:'Nunito',sans-serif; font-size:1rem;
+  padding:14px 18px; line-height:1.6; resize:vertical;
+  transition: border-color 0.2s;
+}
+textarea:focus, input[type=text]:focus {
+  outline:none; border-color:var(--amber);
+  box-shadow: 0 0 0 3px rgba(255,167,38,0.12);
+}
+
+/* ── Checkbox list ── */
+.check-list { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.check-item {
+  display:flex; align-items:flex-start; gap:14px;
+  background:var(--bg2); border:1.5px solid var(--border);
+  border-radius:10px; padding:14px 18px; cursor:pointer;
+  transition:all 0.18s; user-select:none;
+}
+.check-item:hover { border-color:var(--amber); background:var(--bg3); }
+.check-item.selected {
+  border-color:var(--amber); background:rgba(255,167,38,0.08);
+}
+.check-item.reveal-correct { border-color:var(--green)!important; background:rgba(0,230,118,0.08)!important; }
+.check-item.reveal-wrong   { border-color:var(--red)!important;   background:rgba(255,23,68,0.08)!important; }
+.check-box {
+  width:22px; height:22px; border:2px solid var(--muted);
+  border-radius:5px; flex-shrink:0; margin-top:1px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.85rem;
+}
+.check-item.selected .check-box { border-color:var(--amber); color:var(--amber); }
+.check-item.reveal-correct .check-box { border-color:var(--green); color:var(--green); }
+.check-item.reveal-wrong   .check-box { border-color:var(--red);   color:var(--red); }
+.check-label { font-size:1rem; line-height:1.5; }
+
+/* ── Classify cards ── */
+.classify-wrap { margin-bottom:28px; }
+.classify-items { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.classify-item {
+  background:var(--bg2); border:1.5px solid var(--border);
+  border-radius:10px; padding:14px 18px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  flex-wrap:wrap;
+}
+.classify-text { font-size:0.97rem; flex:1; line-height:1.5; }
+.classify-btns { display:flex; gap:8px; flex-shrink:0; }
+.cls-btn {
+  padding:6px 16px; border-radius:20px; border:1.5px solid var(--border);
+  background:var(--bg3); color:var(--muted); font-family:'Rajdhani',sans-serif;
+  font-weight:600; font-size:0.85rem; letter-spacing:1px; cursor:pointer;
+  transition:all 0.18s;
+}
+.cls-btn:hover { border-color:var(--amber); color:var(--amber); }
+.cls-btn.active-a { background:rgba(0,230,118,0.12); border-color:var(--green); color:var(--green); }
+.cls-btn.active-b { background:rgba(255,23,68,0.12);  border-color:var(--red);   color:var(--red);   }
+.cls-btn.active-c { background:rgba(64,196,255,0.12); border-color:var(--blue);  color:var(--blue);  }
+.cls-btn.active-d { background:rgba(255,204,2,0.12);  border-color:var(--amber2);color:var(--amber2);}
+.classify-item.reveal-correct { border-color:var(--green)!important; }
+.classify-item.reveal-wrong   { border-color:var(--red)!important; }
+.reveal-tag {
+  font-size:0.8rem; font-family:'Share Tech Mono',monospace;
+  margin-top:4px; display:none;
+}
+.classify-item.reveal-correct .reveal-tag { display:block; color:var(--green); }
+.classify-item.reveal-wrong   .reveal-tag { display:block; color:var(--red); }
+
+/* ── MCQ ── */
+.mcq-block { margin-bottom:32px; }
+.mcq-q { font-size:1.05rem; font-weight:700; color:var(--text); margin-bottom:14px; line-height:1.5; }
+.mcq-opts { display:flex; flex-direction:column; gap:8px; }
+.mcq-opt {
+  background:var(--bg2); border:1.5px solid var(--border);
+  border-radius:10px; padding:13px 18px;
+  cursor:pointer; transition:all 0.18s; font-size:0.97rem;
+  display:flex; align-items:center; gap:12px;
+}
+.mcq-opt:hover:not(.locked) { border-color:var(--amber); background:var(--bg3); }
+.mcq-opt .opt-lbl {
+  background:var(--bg3); border:1.5px solid var(--muted);
+  border-radius:6px; width:28px; height:28px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Rajdhani',sans-serif; font-weight:700; font-size:0.9rem;
+  transition:all 0.18s;
+}
+.mcq-opt.correct { background:rgba(0,230,118,0.08); border-color:var(--green); }
+.mcq-opt.correct .opt-lbl { background:var(--green); border-color:var(--green); color:#000; }
+.mcq-opt.wrong   { background:rgba(255,23,68,0.08);  border-color:var(--red); }
+.mcq-opt.wrong   .opt-lbl { background:var(--red);   border-color:var(--red);   color:#fff; }
+.mcq-opt.locked  { cursor:default; }
+.mcq-feedback {
+  margin-top:10px; padding:12px 16px; border-radius:8px;
+  font-size:0.93rem; font-weight:600; line-height:1.5; display:none;
+}
+.mcq-feedback.correct-fb { background:rgba(0,230,118,0.08); border:1px solid var(--green); color:var(--green2); display:block; }
+.mcq-feedback.wrong-fb   { background:rgba(255,23,68,0.08);  border:1px solid var(--red);   color:var(--red2);   display:block; }
+
+/* ── ERD table ── */
+.erd-table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+.erd-table th {
+  background:var(--bg3); color:var(--amber); font-family:'Rajdhani',sans-serif;
+  font-size:0.8rem; letter-spacing:2px; text-transform:uppercase; padding:12px 16px;
+  text-align:left; border-bottom:1.5px solid var(--border);
+}
+.erd-table td { padding:12px 16px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.erd-table tr:last-child td { border-bottom:none; }
+.erd-table td.entity-cell { font-family:'Share Tech Mono',monospace; color:var(--blue); font-size:0.9rem; }
+.erd-table td.rel-cell    { color:var(--muted); font-size:0.9rem; font-style:italic; }
+.erd-badge {
+  display:inline-block; padding:4px 14px; border-radius:20px;
+  font-family:'Rajdhani',sans-serif; font-weight:700; font-size:0.85rem;
+  letter-spacing:1px; border:1.5px solid;
+}
+.erd-badge.mm { border-color:var(--amber); color:var(--amber); background:rgba(255,167,38,0.08); }
+.erd-badge.om { border-color:var(--blue);  color:var(--blue);  background:rgba(64,196,255,0.08); }
+.erd-badge.oo { border-color:var(--green); color:var(--green); background:rgba(0,230,118,0.08); }
+.erd-badge.mo { border-color:var(--red2);  color:var(--red2);  background:rgba(255,107,107,0.08); }
+select {
+  background:var(--bg2); border:1.5px solid var(--border);
+  color:var(--text); font-family:'Nunito',sans-serif; font-size:0.9rem;
+  padding:6px 12px; border-radius:8px; cursor:pointer;
+  transition:border-color 0.18s;
+}
+select:focus { outline:none; border-color:var(--amber); }
+.erd-table td.reveal-col { font-size:0.85rem; color:var(--muted); display:none; }
+.revealed .reveal-col { display:table-cell; }
+.correct-val { color:var(--green); font-family:'Share Tech Mono',monospace; font-size:0.85rem; }
+
+/* ── Self-assessment ── */
+.rating-row {
+  display:flex; align-items:center; gap:14px; margin-bottom:14px;
+  padding:14px 18px; background:var(--bg2);
+  border:1.5px solid var(--border); border-radius:10px; flex-wrap:wrap;
+}
+.rating-label { flex:1; font-size:0.97rem; min-width:200px; }
+.stars { display:flex; gap:6px; }
+.star {
+  font-size:1.4rem; cursor:pointer; color:#3a4a60;
+  transition:color 0.15s, transform 0.15s;
+}
+.star:hover, .star.lit { color:var(--amber2); transform:scale(1.2); }
+
+/* ── Reveal button ── */
+.reveal-btn {
+  display:inline-flex; align-items:center; gap:10px;
+  background:rgba(255,167,38,0.1); border:1.5px solid var(--amber);
+  color:var(--amber); padding:11px 26px; border-radius:8px;
+  font-family:'Rajdhani',sans-serif; font-weight:700; font-size:1rem;
+  letter-spacing:2px; cursor:pointer; transition:all 0.2s;
+  margin-top:6px;
+}
+.reveal-btn:hover { background:rgba(255,167,38,0.18); box-shadow:0 0 20px rgba(255,167,38,0.2); }
+.reveal-btn::before { content:'🔓'; font-size:1rem; }
+
+.reveal-answer {
+  margin-top:16px; padding:18px 22px;
+  background:rgba(255,167,38,0.06); border:1.5px solid rgba(255,167,38,0.3);
+  border-radius:10px; display:none;
+}
+.reveal-answer.visible { display:block; animation:fadein 0.4s ease; }
+.reveal-answer h4 { color:var(--amber2); font-family:'Rajdhani',sans-serif; font-size:1rem; letter-spacing:1px; margin-bottom:8px; }
+.reveal-answer p, .reveal-answer li { font-size:0.95rem; color:var(--text); line-height:1.7; }
+.reveal-answer ul { padding-left:20px; }
+.reveal-answer li { margin-bottom:4px; }
+.reveal-answer li strong { color:var(--blue); }
+
+/* ── Info card ── */
+.info-card {
+  background:var(--bg2); border:1.5px solid var(--border);
+  border-radius:12px; padding:20px 24px; margin-bottom:16px;
+}
+.info-card h4 { font-family:'Rajdhani',sans-serif; color:var(--amber); font-size:1rem; letter-spacing:1px; margin-bottom:8px; }
+.info-card p  { font-size:0.95rem; color:var(--text); line-height:1.7; }
+.info-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:24px; }
+.info-grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:24px; }
+
+/* ── Schema diagram ── */
+.schema-diagram { display:flex; flex-direction:column; gap:0; margin-bottom:24px; max-width:600px; }
+.schema-level {
+  padding:16px 22px; position:relative; cursor:default;
+  transition:all 0.2s;
+}
+.schema-level:hover { filter:brightness(1.1); }
+.schema-level .sl-tag { font-family:'Rajdhani',sans-serif; font-size:0.75rem; letter-spacing:3px; font-weight:600; margin-bottom:4px; }
+.schema-level .sl-name { font-size:1.1rem; font-weight:700; margin-bottom:4px; }
+.schema-level .sl-desc { font-size:0.88rem; opacity:0.85; line-height:1.5; }
+.sl-ext  { background:linear-gradient(90deg,#1a2a4a,#0d1e3a); border-left:4px solid var(--blue);  color:#b8d4f8; }
+.sl-log  { background:linear-gradient(90deg,#1e1a3a,#160e2e); border-left:4px solid var(--amber); color:#f8d8b0; }
+.sl-phy  { background:linear-gradient(90deg,#0a2010,#061808); border-left:4px solid var(--green); color:#b0f8c8; }
+.schema-arrow { text-align:left; padding:4px 0 4px 26px; color:var(--muted); font-size:0.85rem; }
+
+/* ── Bottom nav ── */
+#bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  background:rgba(8,12,20,0.97); border-top:1px solid var(--border);
+  padding:14px 40px;
+  display:flex; align-items:center; justify-content:space-between;
+  backdrop-filter:blur(8px);
+}
+.nav-btn {
+  display:inline-flex; align-items:center; gap:10px;
+  background:var(--bg2); border:1.5px solid var(--border);
+  color:var(--text); padding:11px 28px; border-radius:8px;
+  font-family:'Rajdhani',sans-serif; font-weight:700; font-size:1rem;
+  letter-spacing:2px; cursor:pointer; transition:all 0.2s;
+}
+.nav-btn:hover:not(:disabled) { border-color:var(--amber); color:var(--amber); }
+.nav-btn:disabled { opacity:0.3; cursor:default; }
+.nav-btn.primary { background:var(--amber); border-color:var(--amber); color:#000; font-size:1.05rem; }
+.nav-btn.primary:hover { background:var(--amber2); border-color:var(--amber2); }
+#nav-info { font-family:'Share Tech Mono',monospace; font-size:0.85rem; color:var(--muted); text-align:center; }
+
+/* ── Divider ── */
+.divider { height:1px; background:var(--border); margin:28px 0; }
+
+/* ── Score panel ── */
+.score-panel {
+  display:flex; gap:16px; flex-wrap:wrap; margin-bottom:28px;
+}
+.score-item {
+  background:var(--bg2); border:1.5px solid var(--border);
+  border-radius:12px; padding:14px 22px; text-align:center; flex:1; min-width:120px;
+}
+.score-item .si-val { font-family:'Rajdhani',sans-serif; font-size:2.2rem; font-weight:700; color:var(--amber2); }
+.score-item .si-lbl { font-size:0.8rem; color:var(--muted); letter-spacing:1px; font-family:'Rajdhani',sans-serif; }
+
+/* ── Glow effect on key terms ── */
+.key { color:var(--amber2); font-weight:700; }
+.key-g { color:var(--green2); font-weight:700; }
+.key-b { color:var(--blue);   font-weight:700; }
+.key-r { color:var(--red2);   font-weight:700; }
+
+/* ── Responsive ── */
+@media(max-width:700px){
+  .phase-hero { padding:32px 22px 24px; }
+  .phase-body  { padding:24px 22px 32px; }
+  #bottom-nav  { padding:12px 16px; }
+  .info-grid2,.info-grid3 { grid-template-columns:1fr; }
+  .classify-item { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ BLUEPRINT BACKGROUND LAYER ══ -->
+<div id="bp-layer">
+  <div class="bp-grid"></div>
+
+  <!-- 1. Large top-down F/A-18 — top right, floating -->
+  <div class="bp-plane bp-float" style="top:4%;right:2%;width:130px;--r:-12deg;--dur:14s;--del:0s;opacity:0.85">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 240" fill="none" stroke="currentColor" stroke-width="0.8">
+      <path d="M50,2 C53,12 55,32 56,58 C57,82 58,112 58,132 C58,158 56,188 55,208 C54,218 52,228 50,234 C48,228 46,218 45,208 C44,188 42,158 42,132 C42,112 43,82 44,58 C45,32 47,12 50,2Z"/>
+      <path d="M44,78 C36,84 16,105 6,128 C14,133 26,134 38,129 C41,120 43,108 44,95Z"/>
+      <path d="M56,78 C64,84 84,105 94,128 C86,133 74,134 62,129 C59,120 57,108 56,95Z"/>
+      <path d="M44,192 C36,198 26,213 20,223 C27,227 35,225 42,218Z"/>
+      <path d="M56,192 C64,198 74,213 80,223 C73,227 65,225 58,218Z"/>
+      <path d="M46,32 C45,42 45,56 46,67 C47,72 50,74 50,74 C50,74 53,72 54,67 C55,56 55,42 54,32Z"/>
+      <line x1="50" y1="0" x2="50" y2="240" stroke-dasharray="4,3" stroke-width="0.4" opacity="0.5"/>
+      <line x1="5" y1="142" x2="95" y2="142" stroke-dasharray="2,2" stroke-width="0.35" opacity="0.5"/>
+      <line x1="19" y1="225" x2="81" y2="225" stroke-dasharray="2,2" stroke-width="0.35" opacity="0.5"/>
+      <circle cx="50" cy="2" r="2" stroke-width="0.5"/>
+      <circle cx="6" cy="128" r="1.5" stroke-width="0.5"/>
+      <circle cx="94" cy="128" r="1.5" stroke-width="0.5"/>
+      <text x="52" y="14" font-size="4" fill="currentColor" font-family="monospace" opacity="0.7">REF.A</text>
+      <text x="96" y="130" font-size="3.5" fill="currentColor" font-family="monospace" opacity="0.7">WS-L</text>
+      <text x="-4" y="130" font-size="3.5" fill="currentColor" font-family="monospace" opacity="0.7">WS-R</text>
+    </svg>
+  </div>
+  <div class="bp-label" style="top:calc(4% + 250px);right:20px;--r:0deg">F/A-18 SUPER HORNET — TOP VIEW<br>SCALE 1:72 — BLUEPRINT REV.3</div>
+
+  <!-- 2. Side-view — left middle, floating -->
+  <div class="bp-plane bp-float" style="top:30%;left:1%;width:300px;--r:2deg;--dur:16s;--del:-4s;opacity:0.75">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 90" fill="none" stroke="currentColor" stroke-width="0.8">
+      <path d="M12,45 C30,37 58,31 90,29 C122,27 152,29 180,33 C210,37 235,42 258,44 C268,44 276,44 282,45"/>
+      <path d="M12,45 C30,53 58,57 90,58 C122,59 152,58 180,56 C210,54 235,51 258,47 C268,46 276,45 282,45"/>
+      <path d="M4,45 L12,39 L12,51 Z"/>
+      <path d="M75,29 C83,20 100,17 116,24 C120,29 112,29 90,29"/>
+      <path d="M102,45 L80,16 L160,41Z"/>
+      <path d="M232,40 L248,13 L255,40Z"/>
+      <path d="M236,50 L255,40 L262,50"/>
+      <path d="M226,52 L208,68 L223,56"/>
+      <ellipse cx="277" cy="45" rx="9" ry="11"/>
+      <line x1="0" y1="45" x2="300" y2="45" stroke-dasharray="6,3" stroke-width="0.35" opacity="0.4"/>
+      <line x1="80" y1="14" x2="80" y2="72" stroke-dasharray="2,2" stroke-width="0.3" opacity="0.4"/>
+      <line x1="248" y1="10" x2="248" y2="80" stroke-dasharray="2,2" stroke-width="0.3" opacity="0.4"/>
+      <circle cx="4" cy="45" r="2.5" stroke-width="0.5"/>
+      <circle cx="282" cy="45" r="2.5" stroke-width="0.5"/>
+      <text x="286" y="44" font-size="4.5" fill="currentColor" font-family="monospace" opacity="0.7">NZZ-2</text>
+      <text x="84" y="17" font-size="4" fill="currentColor" font-family="monospace" opacity="0.7">CANOPY</text>
+    </svg>
+  </div>
+  <div class="bp-label" style="top:calc(30% + 60px);left:8px">F-14 TOMCAT — LATERAL PROFILE — SCALE 1:48</div>
+
+  <!-- 3. Small top-down — bottom left -->
+  <div class="bp-plane bp-float" style="bottom:12%;left:3%;width:80px;--r:20deg;--dur:18s;--del:-7s;opacity:0.65">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 240" fill="none" stroke="currentColor" stroke-width="0.9">
+      <path d="M50,2 C53,12 55,32 56,58 C57,82 58,112 58,132 C58,158 56,188 55,208 C54,218 52,228 50,234 C48,228 46,218 45,208 C44,188 42,158 42,132 C42,112 43,82 44,58 C45,32 47,12 50,2Z"/>
+      <path d="M44,78 C36,84 16,105 6,128 C14,133 26,134 38,129 C41,120 43,108 44,95Z"/>
+      <path d="M56,78 C64,84 84,105 94,128 C86,133 74,134 62,129 C59,120 57,108 56,95Z"/>
+      <path d="M44,192 C36,198 26,213 20,223 C27,227 35,225 42,218Z"/>
+      <path d="M56,192 C64,198 74,213 80,223 C73,227 65,225 58,218Z"/>
+      <line x1="50" y1="0" x2="50" y2="240" stroke-dasharray="4,3" stroke-width="0.4" opacity="0.5"/>
+    </svg>
+  </div>
+
+  <!-- 4. Medium top-down — center right, very faint -->
+  <div class="bp-plane" style="top:52%;right:6%;width:100px;transform:rotate(-25deg);opacity:0.45">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 240" fill="none" stroke="currentColor" stroke-width="0.8">
+      <path d="M50,2 C53,12 55,32 56,58 C57,82 58,112 58,132 C58,158 56,188 55,208 C54,218 52,228 50,234 C48,228 46,218 45,208 C44,188 42,158 42,132 C42,112 43,82 44,58 C45,32 47,12 50,2Z"/>
+      <path d="M44,78 C36,84 16,105 6,128 C14,133 26,134 38,129 C41,120 43,108 44,95Z"/>
+      <path d="M56,78 C64,84 84,105 94,128 C86,133 74,134 62,129 C59,120 57,108 56,95Z"/>
+      <path d="M44,192 C36,198 26,213 20,223 C27,227 35,225 42,218Z"/>
+      <path d="M56,192 C64,198 74,213 80,223 C73,227 65,225 58,218Z"/>
+      <line x1="50" y1="0" x2="50" y2="240" stroke-dasharray="4,3" stroke-width="0.4" opacity="0.4"/>
+    </svg>
+  </div>
+
+  <!-- 5. Slow-drifting side-view — crosses screen at top -->
+  <div class="bp-plane bp-drift" style="top:14%;left:0;width:220px;--r:-5deg;--dur:75s;--del:-20s;opacity:0.55">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 90" fill="none" stroke="currentColor" stroke-width="0.8">
+      <path d="M12,45 C30,37 58,31 90,29 C122,27 152,29 180,33 C210,37 235,42 258,44 C268,44 276,44 282,45"/>
+      <path d="M12,45 C30,53 58,57 90,58 C122,59 152,58 180,56 C210,54 235,51 258,47 C268,46 276,45 282,45"/>
+      <path d="M4,45 L12,39 L12,51 Z"/>
+      <path d="M75,29 C83,20 100,17 116,24 C120,29 112,29 90,29"/>
+      <path d="M102,45 L80,16 L160,41Z"/>
+      <path d="M232,40 L248,13 L255,40Z"/>
+      <path d="M226,52 L208,68 L223,56"/>
+      <ellipse cx="277" cy="45" rx="9" ry="11"/>
+      <line x1="0" y1="45" x2="300" y2="45" stroke-dasharray="6,3" stroke-width="0.3" opacity="0.4"/>
+    </svg>
+  </div>
+
+  <!-- 6. Large side-view — bottom area, faint -->
+  <div class="bp-plane bp-float" style="bottom:16%;right:1%;width:260px;--r:3deg;--dur:20s;--del:-10s;opacity:0.55">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 90" fill="none" stroke="currentColor" stroke-width="0.8">
+      <path d="M12,45 C30,37 58,31 90,29 C122,27 152,29 180,33 C210,37 235,42 258,44 C268,44 276,44 282,45"/>
+      <path d="M12,45 C30,53 58,57 90,58 C122,59 152,58 180,56 C210,54 235,51 258,47 C268,46 276,45 282,45"/>
+      <path d="M4,45 L12,39 L12,51 Z"/>
+      <path d="M75,29 C83,20 100,17 116,24 C120,29 112,29 90,29"/>
+      <path d="M102,45 L80,16 L160,41Z"/>
+      <path d="M232,40 L248,13 L255,40Z"/>
+      <path d="M226,52 L208,68 L223,56"/>
+      <ellipse cx="277" cy="45" rx="9" ry="11"/>
+      <line x1="0" y1="45" x2="300" y2="45" stroke-dasharray="6,3" stroke-width="0.3" opacity="0.4"/>
+      <line x1="80" y1="14" x2="80" y2="72" stroke-dasharray="2,2" stroke-width="0.3" opacity="0.35"/>
+      <circle cx="4" cy="45" r="2" stroke-width="0.5"/>
+    </svg>
+  </div>
+  <div class="bp-label" style="bottom:calc(16% + 52px);right:10px">F-14 TOMCAT — LATERAL — REV.1</div>
+
+  <!-- Author watermark -->
+  <div class="bp-author">
+    TOPGUN DATA ACADEMY — A3 DATABASES<br>
+    IB COMPUTER SCIENCE SL · 2026<br>
+    DESIGNED BY // PABLO ROBAYO
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-left">
+    <div class="hud-logo">✈ TOPGUN DATA ACADEMY</div>
+    <div class="hud-sep"></div>
+    <div class="phase-dots" id="phase-dots"></div>
+  </div>
+  <div class="hud-right">MISSION <span id="phase-label">01</span> OF 08 &nbsp;|&nbsp; A3 DATABASES &nbsp;|&nbsp; CS SL</div>
+</div>
+
+<div id="main">
+
+<!-- ════════════════════════════════════════════
+     PHASE 0 — SCRAMBLE
+     Furman: Buena pregunta / Motivación
+════════════════════════════════════════════ -->
+<div class="phase active" id="phase-0">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 01 — BRIEFING ROOM <span class="principle">✦ BUENA PREGUNTA</span></div>
+    <div class="phase-title">SCRAMBLE.<br>ALL PILOTS TO BRIEFING ROOM.</div>
+    <p class="phase-story">
+      <strong>CLASSIFIED SITUATION REPORT:</strong> The TOPGUN Academy's pilot tracking system just crashed. 47 years of records, 3,200 missions, and 650 aircraft assignments were stored across scattered text files and broken Excel spreadsheets. The data is <em>chaos</em>.<br><br>
+      You are the Academy's new Data Officer — callsign: <strong>MAVERICK</strong>. Your mission over the next two hours: understand, design, and defend a proper database system for TOPGUN.<br><br>
+      But first — your commanding officer wants to hear what you already think.
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="q-block">
+      <div class="section-label">PRE-FLIGHT HYPOTHESIS</div>
+      <div class="q-text"><span class="q-icon">🎯</span>Your wingman says: <em>"Why do we even need a database? Excel does everything."</em> Write your initial response. What do you think the difference is? (There's no wrong answer — we'll revisit this at the end.)</div>
+      <textarea id="p0-q1" rows="5" placeholder="Type your hypothesis here..." oninput="save('p0-q1',this.value)"></textarea>
+    </div>
+    <div class="divider"></div>
+    <div class="q-block">
+      <div class="section-label">MISSION OBJECTIVES</div>
+      <div class="info-grid2">
+        <div class="info-card"><h4>🕐 HOUR 1 TARGETS</h4><p>Three-Schema Architecture (A3.1)<br>Relational Model — strengths & threats (A3.2)</p></div>
+        <div class="info-card"><h4>🕑 HOUR 2 TARGETS</h4><p>Entities, Attributes, PK & FK (A3.2)<br>ERD Design — cardinality & modality (A3.2)</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PHASE 1 — CHAOS INTEL
+     Furman: Indagación / Aprender del error
+════════════════════════════════════════════ -->
+<div class="phase" id="phase-1">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 02 — INTEL ANALYSIS <span class="principle">✦ INDAGACIÓN</span></div>
+    <div class="phase-title">INTEL FAILURE.<br>ANALYSE THE CRASH.</div>
+    <p class="phase-story">
+      The crashed system's data has been partially recovered. Before we design the solution, we need to understand the problem. <strong>Examine the recovered file below</strong> — it's what the Academy was using to track pilots.
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="terminal">
+pilots_data.txt — RECOVERED FILE (partial)
+──────────────────────────────────────────────────────────────────
+<span class="dim">Row 1:</span>  Maverick, Pete Mitchell, F-14 Tomcat, Miramar, 1986, Active, Top Gun grad, Lt.
+<span class="dim">Row 2:</span>  Goose, Nick Bradshaw, F-14, Miramar, 1986, KIA, Backseat officer, Lt.
+<span class="dim">Row 3:</span>  Iceman, Tom Kazansky, 1986, Miramar, F-14 Tomcat, Active, Top Gun grad
+<span class="dim">Row 4:</span>  Rooster, Bradley Bradshaw, F/A-18, Miramar, 2022, Active, Lt., son of Goose, Lt.
+<span class="dim">Row 5:</span>  Maverick, Pete Mitchell, F/A-18 Super Hornet, Miramar, 2022, Active, Capt., Top Gun inst.
+<span class="warn">Row 6:</span>  ??? , ???, unknown, , 1998, ,Transferred,
+<span class="dim">Row 7:</span>  Phoenix, Natasha Trace, F/A-18, Lt., 2022, Active, Miramar
+
+<span class="ok">NOTE: 3,200 more rows in this format. Also: mission data mixed in same file.</span>
+    </div>
+
+    <div class="section-label">YOUR MISSION — IDENTIFY THE PROBLEMS</div>
+    <div class="q-text">Select ALL the data problems you can identify in this file:</div>
+    <div class="check-list" id="p1-checks">
+      <div class="check-item" onclick="toggleCheck(this,'p1','0')" data-correct="true">
+        <div class="check-box">✓</div>
+        <div class="check-label">Columns are inconsistent — rows have data in different orders (Row 1 vs Row 3 vs Row 7)</div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this,'p1','1')" data-correct="true">
+        <div class="check-box">✓</div>
+        <div class="check-label">No unique identifier (ID) for each pilot — "Maverick" appears twice with different data</div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this,'p1','2')" data-correct="true">
+        <div class="check-box">✓</div>
+        <div class="check-label">Multiple types of data are mixed: pilot info, aircraft info, and mission data in the same row</div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this,'p1','3')" data-correct="false">
+        <div class="check-box">✓</div>
+        <div class="check-label">The file uses too many columns — it would be better with fewer fields</div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this,'p1','4')" data-correct="true">
+        <div class="check-box">✓</div>
+        <div class="check-label">Missing values (Row 6 has empty fields) with no way to enforce what is required</div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this,'p1','5')" data-correct="true">
+        <div class="check-box">✓</div>
+        <div class="check-label">If Maverick is promoted, we'd have to find and update EVERY row where he appears</div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this,'p1','6')" data-correct="false">
+        <div class="check-box">✓</div>
+        <div class="check-label">The file should use JSON format instead of plain text</div>
+      </div>
+    </div>
+
+    <button class="reveal-btn" onclick="revealChecks('p1')">REVEAL ANALYSIS</button>
+    <div class="reveal-answer" id="p1-reveal">
+      <h4>COMMANDING OFFICER'S DEBRIEF</h4>
+      <p>The correct problems are rows 1, 2, 3, 5, and 6. This is exactly what a <span style="color:var(--amber2)">database management system (DBMS)</span> solves:</p>
+      <ul>
+        <li><strong>Schema enforcement</strong> — fixed column structure, every row follows the same format</li>
+        <li><strong>Primary Keys</strong> — a unique ID per pilot, so "Maverick" can exist twice (different periods) without confusion</li>
+        <li><strong>Normalisation</strong> — separate PILOT, AIRCRAFT, and MISSION tables instead of one flat file</li>
+        <li><strong>Constraints</strong> — NOT NULL rules catch missing mandatory fields</li>
+        <li><strong>Single source of truth</strong> — update Maverick's rank once, everywhere reflects it</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PHASE 2 — THREE SCHEMAS
+     Furman: Construcción conceptual activa
+════════════════════════════════════════════ -->
+<div class="phase" id="phase-2">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 03 — ARCHITECTURE BRIEFING <span class="principle">✦ CONSTRUCCIÓN ACTIVA</span></div>
+    <div class="phase-title">SCHEMA ARCHITECTURE.<br>THREE LEVELS OF COMMAND.</div>
+    <p class="phase-story">
+      The ANSI/SPARC architecture separates a database into <strong>three independent levels</strong>. This is crucial: changing how data is <em>stored</em> should never break how users <em>see</em> it. Study the levels, then complete the mission below.
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="schema-diagram">
+      <div class="schema-level sl-ext">
+        <div class="sl-tag">LEVEL 1 — EXTERNAL / CONCEPTUAL SCHEMA</div>
+        <div class="sl-name">Commander's View</div>
+        <div class="sl-desc">WHAT data exists. Technology-independent. Describes entities and relationships. <br>TOPGUN example: "We track PILOTs who fly on MISSIONs."</div>
+      </div>
+      <div class="schema-arrow">▼  maps to</div>
+      <div class="schema-level sl-log">
+        <div class="sl-tag">LEVEL 2 — LOGICAL SCHEMA</div>
+        <div class="sl-name">Database Designer's Blueprint</div>
+        <div class="sl-desc">HOW data is structured. Tables, columns, data types, Primary Keys, Foreign Keys.<br>TOPGUN example: PILOT table with (pilot_id INT PK, callsign VARCHAR, rank VARCHAR, base_id INT FK)</div>
+      </div>
+      <div class="schema-arrow">▼  implemented by</div>
+      <div class="schema-level sl-phy">
+        <div class="sl-tag">LEVEL 3 — PHYSICAL SCHEMA</div>
+        <div class="sl-name">Server Engineer's Specification</div>
+        <div class="sl-desc">WHERE and HOW data is stored. File formats, indexes, memory allocation, disk blocks.<br>TOPGUN example: "B+ tree index on pilot_id, stored in /data/topgun/pilots.db on SSD RAID array."</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">MISSION — CLASSIFY THE STATEMENTS</div>
+    <div class="q-text">Assign each statement to the correct schema level: <span class="key-b">C = Conceptual</span> · <span class="key">L = Logical</span> · <span class="key-g">P = Physical</span></div>
+
+    <div class="classify-wrap">
+      <div class="classify-items" id="p2-items">
+        <div class="classify-item" data-correct="L">
+          <div class="classify-text">"The MISSION table has columns: mission_id (INT), location (VARCHAR), date (DATE), classification_level (VARCHAR)."</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p2','0','C')">C</button>
+            <button class="cls-btn" onclick="classify(this,'p2','0','L')">L</button>
+            <button class="cls-btn" onclick="classify(this,'p2','0','P')">P</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="P">
+          <div class="classify-text">"The pilot_id column is indexed with a B+ tree for fast lookup. Records are stored on three mirrored SSD drives."</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p2','1','C')">C</button>
+            <button class="cls-btn" onclick="classify(this,'p2','1','L')">L</button>
+            <button class="cls-btn" onclick="classify(this,'p2','1','P')">P</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="C">
+          <div class="classify-text">"The Academy needs to track PILOTs, the MISSIONs they fly, the AIRCRAFT they use, and which BASE they are stationed at."</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p2','2','C')">C</button>
+            <button class="cls-btn" onclick="classify(this,'p2','2','L')">L</button>
+            <button class="cls-btn" onclick="classify(this,'p2','2','P')">P</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="P">
+          <div class="classify-text">"Each database page is 8KB. The buffer pool holds 512 pages in RAM for fast access."</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p2','3','C')">C</button>
+            <button class="cls-btn" onclick="classify(this,'p2','3','L')">L</button>
+            <button class="cls-btn" onclick="classify(this,'p2','3','P')">P</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="L">
+          <div class="classify-text">"The ASSIGNMENT table uses a composite Primary Key (pilot_id, mission_id) and has a Foreign Key to AIRCRAFT."</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p2','4','C')">C</button>
+            <button class="cls-btn" onclick="classify(this,'p2','4','L')">L</button>
+            <button class="cls-btn" onclick="classify(this,'p2','4','P')">P</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="C">
+          <div class="classify-text">"A pilot can be assigned to many missions. Each mission involves multiple pilots and one primary aircraft."</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p2','5','C')">C</button>
+            <button class="cls-btn" onclick="classify(this,'p2','5','L')">L</button>
+            <button class="cls-btn" onclick="classify(this,'p2','5','P')">P</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+      </div>
+      <button class="reveal-btn" onclick="revealClassify('p2')">REVEAL SCHEMA ANSWERS</button>
+    </div>
+
+    <div class="q-block">
+      <div class="q-text">🤔 <strong>Deep question:</strong> If the Navy upgrades its servers from HDD to SSD (changes the physical schema), should the database designer need to rewrite the SQL queries? Why or why not?</div>
+      <textarea id="p2-deep" rows="4" placeholder="Your analysis..." oninput="save('p2-deep',this.value)"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PHASE 3 — RELATIONAL MODEL
+     Furman: Pensamiento crítico / Debate
+════════════════════════════════════════════ -->
+<div class="phase" id="phase-3">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 04 — THREAT ASSESSMENT <span class="principle">✦ PENSAMIENTO CRÍTICO</span></div>
+    <div class="phase-title">RELATIONAL MODEL.<br>STRENGTHS vs THREATS.</div>
+    <p class="phase-story">
+      The relational model has been the backbone of data systems since 1970. But no technology is invincible. Your job as a Data Officer is to know both its <strong>STRENGTHS</strong> (why it dominates) and its <strong>THREATS</strong> (where it fails). Study the mission, then evaluate each intel item.
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="section-label">THREAT ASSESSMENT — CLASSIFY EACH STATEMENT</div>
+    <div class="q-text">Is this a <span class="key-g">STRENGTH</span> (benefit) or a <span class="key-r">THREAT</span> (limitation) of the relational model?</div>
+    <div class="classify-wrap">
+      <div class="classify-items" id="p3-items">
+        <div class="classify-item" data-correct="S">
+          <div class="classify-text">Constraints like PRIMARY KEY, FOREIGN KEY, and NOT NULL automatically reject invalid data before it is stored.</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p3','0','S')">✅ STRENGTH</button>
+            <button class="cls-btn" onclick="classify(this,'p3','0','T')">⚠️ THREAT</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="T">
+          <div class="classify-text">Adding a new column to a table with 50 million rows can lock the entire table for hours in production.</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p3','1','S')">✅ STRENGTH</button>
+            <button class="cls-btn" onclick="classify(this,'p3','1','T')">⚠️ THREAT</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="S">
+          <div class="classify-text">ACID transactions guarantee that if a system crashes mid-operation, the database is not left in a corrupt half-updated state.</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p3','2','S')">✅ STRENGTH</button>
+            <button class="cls-btn" onclick="classify(this,'p3','2','T')">⚠️ THREAT</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="T">
+          <div class="classify-text">Scaling a relational database across 500 servers (horizontal scaling) is extremely complex compared to NoSQL alternatives.</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p3','3','S')">✅ STRENGTH</button>
+            <button class="cls-btn" onclick="classify(this,'p3','3','T')">⚠️ THREAT</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="S">
+          <div class="classify-text">Normalisation eliminates duplicate data — updating a pilot's rank requires changing exactly one row, not hundreds.</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p3','4','S')">✅ STRENGTH</button>
+            <button class="cls-btn" onclick="classify(this,'p3','4','T')">⚠️ THREAT</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+        <div class="classify-item" data-correct="T">
+          <div class="classify-text">Storing unstructured data like cockpit video recordings, satellite imagery, or sensor streams is awkward in rigid fixed-column tables.</div>
+          <div class="classify-btns">
+            <button class="cls-btn" onclick="classify(this,'p3','5','S')">✅ STRENGTH</button>
+            <button class="cls-btn" onclick="classify(this,'p3','5','T')">⚠️ THREAT</button>
+          </div>
+          <div class="reveal-tag"></div>
+        </div>
+      </div>
+      <button class="reveal-btn" onclick="revealClassify('p3')">REVEAL THREAT ANALYSIS</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="q-block">
+      <div class="wingman-note">🛩 WINGMAN DISCUSSION — 4 minutes</div>
+      <div class="q-text">The Navy wants to store 50 years of cockpit video recordings (approx. 8 petabytes of unstructured video). Your CO asks: <em>"Should we use a relational database for this?"</em> Discuss with your wingman, then write your recommendation below.</div>
+      <textarea id="p3-wing" rows="5" placeholder="Our recommendation and reasoning..." oninput="save('p3-wing',this.value)"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PHASE 4 — CALLSIGN GLOSSARY
+     Furman: Aprendizaje con significado / Metacáfora
+════════════════════════════════════════════ -->
+<div class="phase" id="phase-4">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 05 — CALLSIGN BRIEFING <span class="principle">✦ APRENDIZAJE CON SIGNIFICADO</span></div>
+    <div class="phase-title">CALLSIGN BRIEFING.<br>KNOW YOUR TERMINOLOGY.</div>
+    <p class="phase-story">
+      Every pilot needs to know the callsigns. In databases, the <strong>key terms</strong> are your vocabulary for the rest of the course. We'll learn them through the TOPGUN context — then test your recall immediately.
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="info-grid2">
+      <div class="info-card">
+        <h4>📦 ENTITY</h4>
+        <p>A <span class="key">type of asset</span> we track data about.<br><em>TOPGUN:</em> PILOT, AIRCRAFT, MISSION, BASE<br><em>DB:</em> Each entity becomes a table.</p>
+      </div>
+      <div class="info-card">
+        <h4>🔧 ATTRIBUTE</h4>
+        <p>The <span class="key">specs</span> of that asset — its properties.<br><em>TOPGUN:</em> An aircraft's model, top speed, status<br><em>DB:</em> Each attribute becomes a column.</p>
+      </div>
+      <div class="info-card">
+        <h4>👤 TUPLE</h4>
+        <p>One <span class="key">specific unit</span> — a single complete record.<br><em>TOPGUN:</em> Pete "Maverick" Mitchell's full record<br><em>DB:</em> Each tuple is one row in a table.</p>
+      </div>
+      <div class="info-card">
+        <h4>🔑 PRIMARY KEY (PK)</h4>
+        <p>The <span class="key">tail number</span> — unique, never repeated, never null.<br><em>TOPGUN:</em> Tail# 202 identifies one specific F-14<br><em>DB:</em> PK uniquely identifies each tuple.</p>
+      </div>
+      <div class="info-card">
+        <h4>🗝 FOREIGN KEY (FK)</h4>
+        <p>The <span class="key">home base ID</span> — links to another table.<br><em>TOPGUN:</em> base_id in PILOT references BASE table<br><em>DB:</em> FK enforces referential integrity.</p>
+      </div>
+      <div class="info-card">
+        <h4>📋 RELATION</h4>
+        <p>The <span class="key">full roster</span> — the complete table.<br><em>TOPGUN:</em> All pilot records = the PILOT relation<br><em>DB:</em> A relation is a table in the relational model.</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">TARGET PRACTICE — THREE QUICK HITS</div>
+
+    <div class="mcq-block">
+      <div class="mcq-q">Q1. The TOPGUN database has a PILOT table. The row <code style="color:var(--blue)">(P042, 'Maverick', 'Captain', B01)</code> is an example of a…</div>
+      <div class="mcq-opts" id="p4-q1">
+        <div class="mcq-opt" onclick="answerMCQ('p4-q1',0,1)"><span class="opt-lbl">A</span>Entity</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q1',1,1)"><span class="opt-lbl">B</span>Tuple (a single record / row)</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q1',2,1)"><span class="opt-lbl">C</span>Primary Key</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q1',3,1)"><span class="opt-lbl">D</span>Attribute</div>
+      </div>
+      <div class="mcq-feedback" id="p4-q1-fb"></div>
+    </div>
+
+    <div class="mcq-block">
+      <div class="mcq-q">Q2. In the PILOT table, the column <code style="color:var(--blue)">base_id</code> references the PRIMARY KEY of the BASE table. What is <code style="color:var(--blue)">base_id</code> in the PILOT table?</div>
+      <div class="mcq-opts" id="p4-q2">
+        <div class="mcq-opt" onclick="answerMCQ('p4-q2',0,1)"><span class="opt-lbl">A</span>A Primary Key</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q2',1,1)"><span class="opt-lbl">B</span>An Attribute with a UNIQUE constraint</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q2',2,1)"><span class="opt-lbl">C</span>A Foreign Key</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q2',3,1)"><span class="opt-lbl">D</span>A Tuple identifier</div>
+      </div>
+      <div class="mcq-feedback" id="p4-q2-fb"></div>
+    </div>
+
+    <div class="mcq-block">
+      <div class="mcq-q">Q3. Which of these correctly describes an ENTITY in the relational model?</div>
+      <div class="mcq-opts" id="p4-q3">
+        <div class="mcq-opt" onclick="answerMCQ('p4-q3',0,0)"><span class="opt-lbl">A</span>A single row storing one pilot's complete data</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q3',1,0)"><span class="opt-lbl">B</span>A column that holds a specific piece of information like a name or rank</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q3',2,0)"><span class="opt-lbl">C</span>A real-world object or concept about which we want to store data — represented as a table</div>
+        <div class="mcq-opt" onclick="answerMCQ('p4-q3',3,0)"><span class="opt-lbl">D</span>The unique identifier that distinguishes each row</div>
+      </div>
+      <div class="mcq-feedback" id="p4-q3-fb"></div>
+    </div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">* Correct answer for Q3 is C</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PHASE 5 — ERD NOTATION
+     Furman: Comprensión visual / Representación
+════════════════════════════════════════════ -->
+<div class="phase" id="phase-5">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 06 — VISUAL INTELLIGENCE <span class="principle">✦ REPRESENTACIÓN</span></div>
+    <div class="phase-title">TARGET LOCK.<br>ENTITY-RELATIONSHIP DIAGRAMS.</div>
+    <p class="phase-story">
+      An ERD is your <strong>database blueprint</strong> — a visual map showing entities, their attributes, and how they relate. Before designing TOPGUN's database, you need to read the map. Study the notation, then answer the debrief questions.
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="info-grid3">
+      <div class="info-card"><h4>▭ RECTANGLE</h4><p>Represents an <span class="key">Entity</span><br>e.g. PILOT, MISSION, AIRCRAFT</p></div>
+      <div class="info-card"><h4>◯ ELLIPSE</h4><p>Represents an <span class="key">Attribute</span><br><u>Underlined</u> = Primary Key attribute</p></div>
+      <div class="info-card"><h4>◇ DIAMOND</h4><p>Represents a <span class="key">Relationship</span><br>e.g. FLIES, ASSIGNED TO</p></div>
+      <div class="info-card"><h4>1 : 1</h4><p><span class="key">One-to-One</span><br>Each pilot has exactly one ID card.</p></div>
+      <div class="info-card"><h4>1 : M</h4><p><span class="key">One-to-Many</span><br>One base has many pilots.</p></div>
+      <div class="info-card"><h4>M : M</h4><p><span class="key">Many-to-Many</span><br>Pilots ↔ Missions. Needs junction table.</p></div>
+      <div class="info-card"><h4>| Mandatory</h4><p>Entity <span class="key">MUST</span> participate.<br>A loan MUST have a borrower.</p></div>
+      <div class="info-card"><h4>○ Optional</h4><p>Entity <span class="key">MAY</span> participate.<br>A pilot may or may not be on a mission.</p></div>
+      <div class="info-card"><h4>Crow's Foot</h4><p>Lines show cardinality: one line (1) or fork (many) at each end of the relationship.</p></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">QUICK DEBRIEF — 3 QUESTIONS</div>
+
+    <div class="mcq-block">
+      <div class="mcq-q">Q1. In the TOPGUN ERD, the relationship "PILOT — FLIES → MISSION" needs a junction table in the database. Why?</div>
+      <div class="mcq-opts" id="p5-q1">
+        <div class="mcq-opt" onclick="answerMCQ('p5-q1',0,2)"><span class="opt-lbl">A</span>Because a pilot can only fly one mission at a time</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q1',1,2)"><span class="opt-lbl">B</span>Because it is a Many-to-Many relationship — one pilot flies many missions, one mission involves many pilots</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q1',2,2)"><span class="opt-lbl">C</span>Because the ERD notation requires a diamond for all relationships</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q1',3,2)"><span class="opt-lbl">D</span>Because Foreign Keys cannot be used with pilots</div>
+      </div>
+      <div class="mcq-feedback" id="p5-q1-fb"></div>
+    </div>
+
+    <div class="mcq-block">
+      <div class="mcq-q">Q2. A PILOT has: pilot_id, callsign, rank, hours_flown, base_id. Which attribute should be the PRIMARY KEY, and why?</div>
+      <div class="mcq-opts" id="p5-q2">
+        <div class="mcq-opt" onclick="answerMCQ('p5-q2',0,0)"><span class="opt-lbl">A</span>callsign — because it's memorable and unique</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q2',1,0)"><span class="opt-lbl">B</span>pilot_id — because it is a system-generated unique identifier that never changes or duplicates</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q2',2,0)"><span class="opt-lbl">C</span>rank — because it's the most important attribute</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q2',3,0)"><span class="opt-lbl">D</span>hours_flown — because it's always different for each pilot</div>
+      </div>
+      <div class="mcq-feedback" id="p5-q2-fb"></div>
+    </div>
+
+    <div class="mcq-block">
+      <div class="mcq-q">Q3. A pilot MUST be stationed at a base. A base MAY have zero or more pilots. What is the correct modality notation on the PILOT—BASE relationship?</div>
+      <div class="mcq-opts" id="p5-q3">
+        <div class="mcq-opt" onclick="answerMCQ('p5-q3',0,3)"><span class="opt-lbl">A</span>Both ends are optional (○ on both sides)</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q3',1,3)"><span class="opt-lbl">B</span>Both ends are mandatory (| on both sides)</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q3',2,3)"><span class="opt-lbl">C</span>PILOT side: mandatory (|) · BASE side: mandatory (|)</div>
+        <div class="mcq-opt" onclick="answerMCQ('p5-q3',3,3)"><span class="opt-lbl">D</span>PILOT side: mandatory (|) · BASE side: optional (○) — a base can exist with no pilots assigned</div>
+      </div>
+      <div class="mcq-feedback" id="p5-q3-fb"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PHASE 6 — ERD DESIGN MISSION
+     Furman: Aplicación / Producción de conocimiento
+════════════════════════════════════════════ -->
+<div class="phase" id="phase-6">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 07 — DESIGN OPERATION <span class="principle">✦ APLICACIÓN</span></div>
+    <div class="phase-title">DESIGN OPERATION.<br>BUILD THE TOPGUN DATABASE.</div>
+    <p class="phase-story">
+      Time to put it all together. You will now <strong>design the ERD</strong> for the TOPGUN Academy system. For each relationship, determine the cardinality and modality. Then sketch the full diagram in your workbook.
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="section-label">SYSTEM ENTITIES</div>
+    <div class="info-grid2" style="margin-bottom:24px;">
+      <div class="info-card"><h4>✈ PILOT</h4><p><u>pilot_id</u>, callsign, rank, hours_flown, base_id (FK)</p></div>
+      <div class="info-card"><h4>🛩 AIRCRAFT</h4><p><u>aircraft_id</u>, model, top_speed, status, base_id (FK)</p></div>
+      <div class="info-card"><h4>🎯 MISSION</h4><p><u>mission_id</u>, date, location, classification, outcome</p></div>
+      <div class="info-card"><h4>🏗 BASE</h4><p><u>base_id</u>, name, country, capacity</p></div>
+    </div>
+
+    <div class="section-label">PART A — CLASSIFY EACH RELATIONSHIP</div>
+    <p style="font-size:0.95rem;color:var(--muted);margin-bottom:16px;">For each relationship, choose the cardinality and modality for each entity. Justify in the notes column.</p>
+    <table class="erd-table" id="erd-design-table">
+      <thead>
+        <tr>
+          <th>Entity A</th><th>Relationship</th><th>Entity B</th>
+          <th>Cardinality</th><th>Modality A</th><th>Modality B</th>
+          <th class="reveal-col">✓ Correct Answer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="entity-cell">PILOT</td>
+          <td class="rel-cell">stationed at →</td>
+          <td class="entity-cell">BASE</td>
+          <td><select id="erd-r1-card" onchange="save('erd-r1-card',this.value)"><option value="">--</option><option>1:1</option><option>1:M</option><option>M:M</option></select></td>
+          <td><select id="erd-r1-ma" onchange="save('erd-r1-ma',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td><select id="erd-r1-mb" onchange="save('erd-r1-mb',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td class="reveal-col"><span class="correct-val">M:M (one base, many pilots; one pilot assigned to one base at a time → actually 1:M) | PILOT: Mandatory | BASE: Optional</span></td>
+        </tr>
+        <tr>
+          <td class="entity-cell">PILOT</td>
+          <td class="rel-cell">flies on →</td>
+          <td class="entity-cell">MISSION</td>
+          <td><select id="erd-r2-card" onchange="save('erd-r2-card',this.value)"><option value="">--</option><option>1:1</option><option>1:M</option><option>M:M</option></select></td>
+          <td><select id="erd-r2-ma" onchange="save('erd-r2-ma',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td><select id="erd-r2-mb" onchange="save('erd-r2-mb',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td class="reveal-col"><span class="correct-val">M:M — one pilot flies many missions; one mission has many pilots | PILOT: Optional | MISSION: Mandatory (at least one pilot)</span></td>
+        </tr>
+        <tr>
+          <td class="entity-cell">AIRCRAFT</td>
+          <td class="rel-cell">used in →</td>
+          <td class="entity-cell">MISSION</td>
+          <td><select id="erd-r3-card" onchange="save('erd-r3-card',this.value)"><option value="">--</option><option>1:1</option><option>1:M</option><option>M:M</option></select></td>
+          <td><select id="erd-r3-ma" onchange="save('erd-r3-ma',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td><select id="erd-r3-mb" onchange="save('erd-r3-mb',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td class="reveal-col"><span class="correct-val">M:M — one aircraft used in many missions; one mission can use multiple aircraft | AIRCRAFT: Optional | MISSION: Mandatory (needs aircraft)</span></td>
+        </tr>
+        <tr>
+          <td class="entity-cell">AIRCRAFT</td>
+          <td class="rel-cell">stationed at →</td>
+          <td class="entity-cell">BASE</td>
+          <td><select id="erd-r4-card" onchange="save('erd-r4-card',this.value)"><option value="">--</option><option>1:1</option><option>1:M</option><option>M:M</option></select></td>
+          <td><select id="erd-r4-ma" onchange="save('erd-r4-ma',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td><select id="erd-r4-mb" onchange="save('erd-r4-mb',this.value)"><option value="">--</option><option>Mandatory</option><option>Optional</option></select></td>
+          <td class="reveal-col"><span class="correct-val">1:M — one base stations many aircraft; each aircraft is stationed at one base | AIRCRAFT: Mandatory | BASE: Optional</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="reveal-btn" onclick="revealERD()">REVEAL RECOMMENDED ANSWERS</button>
+
+    <div class="divider"></div>
+    <div class="section-label">PART B — DESIGN YOUR ERD</div>
+    <div class="q-block">
+      <div class="wingman-note">✏️ Draw your ERD on paper / workbook — include: entities (rectangles), attributes, relationships (diamonds), cardinality notation, modality marks</div>
+      <div class="q-text">While you draw, note any design decisions or questions here:</div>
+      <textarea id="p6-notes" rows="5" placeholder="Design notes, questions, observations..." oninput="save('p6-notes',this.value)"></textarea>
+    </div>
+    <div class="q-block">
+      <div class="q-text">🤔 <strong>Design challenge:</strong> The M:M relationship between PILOT and MISSION requires a junction table. What would you call it? What attributes would it have?</div>
+      <textarea id="p6-junction" rows="4" placeholder="Junction table name and attributes..." oninput="save('p6-junction',this.value)"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PHASE 7 — MISSION DEBRIEF
+     Furman: Metacognición / Cierre
+════════════════════════════════════════════ -->
+<div class="phase" id="phase-7">
+  <div class="phase-hero">
+    <div class="phase-tag">MISSION 08 — FINAL DEBRIEF <span class="principle">✦ METACOGNICIÓN</span></div>
+    <div class="phase-title">MISSION DEBRIEF.<br>WHAT DID YOU LEARN?</div>
+    <p class="phase-story">
+      Every TOPGUN pilot debriefs after every mission. <strong>Metacognition</strong> — thinking about your own thinking — is how you learn faster than anyone else. Be honest: what landed, and what's still in the clouds?
+    </p>
+  </div>
+  <div class="phase-body">
+    <div class="section-label">SELF-ASSESSMENT — RATE YOUR CONFIDENCE (1–5 ★)</div>
+    <div id="ratings">
+      <div class="rating-row"><div class="rating-label">Three-Schema Architecture (conceptual / logical / physical)</div><div class="stars" data-key="r1"></div></div>
+      <div class="rating-row"><div class="rating-label">Relational model — benefits & limitations</div><div class="stars" data-key="r2"></div></div>
+      <div class="rating-row"><div class="rating-label">Entities, Attributes, Tuples, PK, FK</div><div class="stars" data-key="r3"></div></div>
+      <div class="rating-row"><div class="rating-label">ERD notation — cardinality & modality</div><div class="stars" data-key="r4"></div></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="q-block">
+      <div class="q-text">✅ <strong>One thing I can now explain to my wingman:</strong></div>
+      <textarea id="p7-learned" rows="3" placeholder="I can explain..." oninput="save('p7-learned',this.value)"></textarea>
+    </div>
+    <div class="q-block">
+      <div class="q-text">❓ <strong>One question I still have (I'm not fully clear on this):</strong></div>
+      <textarea id="p7-question" rows="3" placeholder="I'm still unsure about..." oninput="save('p7-question',this.value)"></textarea>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">REVISIT YOUR OPENING HYPOTHESIS</div>
+    <div class="info-card" style="margin-bottom:16px;">
+      <h4>YOUR ANSWER FROM MISSION 01:</h4>
+      <p id="p7-original-answer" style="font-style:italic;color:var(--muted);">(Loading your original answer…)</p>
+    </div>
+    <div class="q-block">
+      <div class="q-text">Now that you've completed the mission — would you change your answer? Write your <strong>revised argument</strong> for why databases are better than Excel:</div>
+      <textarea id="p7-revisit" rows="5" placeholder="My revised argument..." oninput="save('p7-revisit',this.value)"></textarea>
+    </div>
+
+    <div class="divider"></div>
+    <div class="reveal-answer visible" style="border-color:var(--green);background:rgba(0,230,118,0.05);">
+      <h4 style="color:var(--green);">🏆 MISSION ACCOMPLISHED</h4>
+      <p><strong>Real world:</strong> Netflix, Spotify, and Airbnb all use relational databases (MySQL / PostgreSQL) as their primary data store — while also using NoSQL for specific high-volume, low-structure needs. The IB expects you to understand BOTH when each is appropriate. You now have that foundation.</p>
+      <br>
+      <p><strong>Your callsign in A3:</strong> You can now design schemas, model data with ERDs, and critically evaluate the relational model. Next missions: SQL queries, normalisation, and transactions.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- Bottom Nav -->
+<div id="bottom-nav">
+  <button class="nav-btn" id="btn-prev" onclick="navigate(-1)" disabled>← PREVIOUS</button>
+  <div id="nav-info">TOPGUN DATA ACADEMY  ·  CS SL A3  ·  ← → arrow keys to navigate  ·  <span style="color:rgba(64,196,255,0.6)">Designed by Pablo Robayo</span></div>
+  <button class="nav-btn primary" id="btn-next" onclick="navigate(1)">NEXT MISSION →</button>
+</div>
+
+<script>
+const TOTAL = 8;
+let current = 0;
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+function init() {
+  // Build dots
+  const dots = document.getElementById('phase-dots');
+  for(let i=0;i<TOTAL;i++){
+    const d = document.createElement('div'); d.className='dot'; d.id=`dot-${i}`;
+    dots.appendChild(d);
+  }
+  // Build stars
+  document.querySelectorAll('.stars').forEach(container => {
+    const key = container.dataset.key;
+    for(let s=1;s<=5;s++){
+      const star = document.createElement('span');
+      star.className='star'; star.textContent='★'; star.dataset.val=s;
+      star.onclick = () => setStar(container, key, s);
+      container.appendChild(star);
+    }
+    const saved = localStorage.getItem(key);
+    if(saved) highlightStars(container, parseInt(saved));
+  });
+  // Restore all saved inputs
+  document.querySelectorAll('textarea,[type=text]').forEach(el => {
+    const val = localStorage.getItem(el.id);
+    if(val) el.value = val;
+  });
+  // Restore selects
+  document.querySelectorAll('select').forEach(el => {
+    const val = localStorage.getItem(el.id);
+    if(val) el.value = val;
+  });
+  showPhase(0);
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────
+function navigate(dir) {
+  const next = current + dir;
+  if(next < 0 || next >= TOTAL) return;
+  showPhase(next);
+}
+
+function showPhase(idx) {
+  document.querySelectorAll('.phase').forEach((p,i) => {
+    p.classList.toggle('active', i===idx);
+  });
+  document.querySelectorAll('.dot').forEach((d,i) => {
+    d.classList.remove('active','done');
+    if(i===idx) d.classList.add('active');
+    else if(i<idx) d.classList.add('done');
+  });
+  current = idx;
+  document.getElementById('phase-label').textContent = String(idx+1).padStart(2,'0');
+  document.getElementById('btn-prev').disabled = idx===0;
+  document.getElementById('btn-next').disabled = idx===TOTAL-1;
+  document.getElementById('btn-next').textContent = idx===TOTAL-2 ? 'FINAL DEBRIEF →' : 'NEXT MISSION →';
+
+  // Special: load original answer into debrief
+  if(idx===7) {
+    const orig = localStorage.getItem('p0-q1') || '(no answer recorded)';
+    document.getElementById('p7-original-answer').textContent = orig;
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') navigate(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')   navigate(-1);
+});
+
+// ── STORAGE ───────────────────────────────────────────────────────────────
+function save(key, val) { localStorage.setItem(key, val); }
+
+// ── STARS ─────────────────────────────────────────────────────────────────
+function setStar(container, key, val) {
+  localStorage.setItem(key, val);
+  highlightStars(container, val);
+}
+function highlightStars(container, val) {
+  container.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('lit', parseInt(s.dataset.val) <= val);
+  });
+}
+
+// ── CHECKBOX TOGGLE ───────────────────────────────────────────────────────
+function toggleCheck(el, phase, idx) {
+  if(el.classList.contains('reveal-correct')||el.classList.contains('reveal-wrong')) return;
+  el.classList.toggle('selected');
+  const box = el.querySelector('.check-box');
+  box.textContent = el.classList.contains('selected') ? '✓' : '';
+}
+
+function revealChecks(phase) {
+  document.querySelectorAll(`#${phase}-checks .check-item`).forEach(item => {
+    const correct = item.dataset.correct === 'true';
+    const selected = item.classList.contains('selected');
+    item.classList.remove('selected');
+    if(correct) item.classList.add('reveal-correct');
+    else if(selected) item.classList.add('reveal-wrong');
+    item.querySelector('.check-box').textContent = correct ? '✓' : (selected ? '✗' : '');
+  });
+  const rev = document.getElementById(`${phase}-reveal`);
+  if(rev){ rev.classList.add('visible'); }
+}
+
+// ── CLASSIFY ──────────────────────────────────────────────────────────────
+const classifyMaps = {
+  p2: {cats:{C:'active-c',L:'active-d',P:'active-a'}, labels:{C:'CONCEPTUAL',L:'LOGICAL',P:'PHYSICAL'}},
+  p3: {cats:{S:'active-a',T:'active-b'}, labels:{S:'STRENGTH ✅',T:'THREAT ⚠️'}},
+};
+
+function classify(btn, phase, idx, cat) {
+  const item = btn.closest('.classify-item');
+  if(item.classList.contains('reveal-correct')||item.classList.contains('reveal-wrong')) return;
+  const map = classifyMaps[phase];
+  item.querySelectorAll('.cls-btn').forEach(b => {
+    Object.values(map.cats).forEach(c => b.classList.remove(c));
+  });
+  btn.classList.add(map.cats[cat]);
+  item.dataset.chosen = cat;
+  save(`${phase}-${idx}`, cat);
+}
+
+function revealClassify(phase) {
+  const map = classifyMaps[phase];
+  const items = document.querySelectorAll(`#${phase}-items .classify-item`);
+  items.forEach((item, i) => {
+    const correct = item.dataset.correct;
+    const chosen  = item.dataset.chosen || '';
+    item.classList.remove('reveal-correct','reveal-wrong');
+    const tag = item.querySelector('.reveal-tag');
+    if(chosen === correct) {
+      item.classList.add('reveal-correct');
+      tag.textContent = '✓ Correct: ' + map.labels[correct];
+    } else {
+      item.classList.add('reveal-wrong');
+      tag.textContent = '✗ Answer: ' + map.labels[correct] + (chosen ? ' (you chose: '+map.labels[chosen]+')' : ' (not answered)');
+    }
+  });
+}
+
+// ── MCQ ───────────────────────────────────────────────────────────────────
+const mcqAnswers = {
+  'p4-q1':1,'p4-q2':2,'p4-q3':2,
+  'p5-q1':1,'p5-q2':1,'p5-q3':3,
+};
+const mcqFeedback = {
+  'p4-q1': {c:'Correct! A tuple is a single row/record — in this case, all data for one specific pilot.',
+            w:'Not quite. A tuple is a single complete row in a table — one instance of an entity.'},
+  'p4-q2': {c:'Correct! base_id in PILOT is a Foreign Key — it references the Primary Key of the BASE table.',
+            w:'Not quite. An attribute that references the PK of another table is a Foreign Key.'},
+  'p4-q3': {c:'Correct! An entity is a real-world concept we want to track — represented as a table.',
+            w:'Not quite. An entity is a real-world object/concept about which we store data (becomes a table).'},
+  'p5-q1': {c:'Correct! Many-to-Many relationships cannot be directly stored — they need a junction table (e.g. ASSIGNMENT).',
+            w:'Not quite. PILOT ↔ MISSION is M:M — many pilots fly many missions — which requires a junction table.'},
+  'p5-q2': {c:'Correct! pilot_id is a system-generated unique identifier — ideal as PK. Callsigns like "Maverick" could repeat in theory.',
+            w:'Not quite. pilot_id is best — it\'s system-generated, guaranteed unique, and never changes unlike callsigns or ranks.'},
+  'p5-q3': {c:'Correct! PILOT participation is mandatory (must have a base) but BASE participation is optional (can exist with no pilots yet).',
+            w:'Not quite. PILOT must be stationed somewhere (mandatory |) but a BASE can exist with no pilots (optional ○).'},
+};
+
+function answerMCQ(id, chosen, correct) {
+  const container = document.getElementById(id);
+  if(container.classList.contains('locked-mcq')) return;
+  container.classList.add('locked-mcq');
+  const opts = container.querySelectorAll('.mcq-opt');
+  opts.forEach((o,i) => {
+    o.classList.add('locked');
+    if(i===correct) o.classList.add('correct');
+    else if(i===chosen && chosen!==correct) o.classList.add('wrong');
+  });
+  const fb = document.getElementById(`${id}-fb`);
+  if(chosen===correct){
+    fb.textContent = '✅  ' + mcqFeedback[id].c;
+    fb.className = 'mcq-feedback correct-fb';
+  } else {
+    fb.textContent = '❌  ' + mcqFeedback[id].w;
+    fb.className = 'mcq-feedback wrong-fb';
+  }
+}
+
+// ── ERD REVEAL ────────────────────────────────────────────────────────────
+function revealERD() {
+  document.getElementById('erd-design-table').classList.add('revealed');
+}
+
+// ── KICK OFF ──────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
